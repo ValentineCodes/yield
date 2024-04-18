@@ -2,7 +2,7 @@
 pragma solidity 0.8.19;
 
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import "./IYEthToken.sol";
+import "../interfaces/IYEthToken.sol";
 import "../Permissions/IRoleManager.sol";
 import "./YEthTokenStorage.sol";
 import "../Errors/Errors.sol";
