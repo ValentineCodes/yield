@@ -2,7 +2,6 @@
 pragma solidity 0.8.19;
 
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 import "./IYEthToken.sol";
 import "../Permissions/IRoleManager.sol";
 import "./YEthTokenStorage.sol";
@@ -10,7 +9,7 @@ import "../Errors/Errors.sol";
 
 /// @dev This contract is the yETH ERC20 token
 /// Ownership of the collateral in the protocol is tracked by the yETH token
-contract YEthToken is Initializable, ERC20, IYEthToken, YEthTokenStorageV1 {
+contract YEthToken is ERC20, IYEthToken, YEthTokenStorageV1 {
     /// @dev Allows only a whitelisted address to mint or burn yETH tokens
     modifier onlyMinterBurner() {
         if (!s_roleManager.isYETHMinterBurner(msg.sender))
@@ -24,8 +23,6 @@ contract YEthToken is Initializable, ERC20, IYEthToken, YEthTokenStorageV1 {
         _;
     }
 
-    /// @dev Prevents implementation contract from being initialized.
-    /// @custom:oz-upgrades-unsafe-allow constructor
     constructor(IRoleManager _roleManager) ERC20("Yield ETH", "YETH") {
         if (address(_roleManager) == address(0x0)) revert InvalidZeroInput();
 

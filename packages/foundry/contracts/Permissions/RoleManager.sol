@@ -14,19 +14,15 @@ import "../Errors/Errors.sol";
 contract RoleManager is IRoleManager, AccessControl, RoleManagerStorageV2 {
     /// @dev Prevents implementation contract from being initialized.
     /// @custom:oz-upgrades-unsafe-allow constructor
-    constructor() {
-        _disableInitializers();
-    }
-
-    /// @dev initializer to call after deployment, can only be called once
-    function initialize(address roleManagerAdmin) public initializer {
+    constructor(address roleManagerAdmin) {
         if (address(roleManagerAdmin) == address(0x0))
             revert InvalidZeroInput();
 
-        __AccessControl_init();
-
         _grantRole(DEFAULT_ADMIN_ROLE, roleManagerAdmin);
     }
+
+    /// @dev initializer to call after deployment, can only be called once
+    function initialize() public initializer {}
 
     /// @dev Determines if the specified address has permissions to manage RoleManager
     /// @param potentialAddress Address to check
