@@ -52,7 +52,7 @@ error DelegateAddressAlreadySet();
 /// @dev Error when caller does not have ERC20 Rewards Admin role
 error NotERC20RewardsAdmin();
 
-/// @dev Error when ending ETH fails
+/// @dev Error when ending token fails
 error TransferFailed();
 
 /// @dev Error when caller does not have ETH Minter Burner Admin role
@@ -81,6 +81,9 @@ error InvalidOraclePrice();
 
 /// @dev Error when calling an invalid function
 error NotImplemented();
+
+/// @dev Error when deposit amount is invalid
+error InvalidDepositAmount();
 
 /// @dev Error when calculating token amounts is invalid
 error InvalidTokenAmount();
