@@ -17,6 +17,8 @@ import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
+import {IStrategy} from "./interfaces/IStrategy.sol";
+
 contract OperatorDelegator is IOperatorDelegator, Context {
     using SafeERC20 for IERC20;
 
@@ -39,7 +41,7 @@ contract OperatorDelegator is IOperatorDelegator, Context {
     /// @dev The address to delegate tokens to in EigenLayer
     address public delegateAddress;
 
-    address constant stETH = 0x0;
+    address constant STETH = 0x0;
 
     /// @dev Allows only a whitelisted address to configure the contract
     modifier onlyOperatorDelegatorAdmin() {
@@ -73,6 +75,11 @@ contract OperatorDelegator is IOperatorDelegator, Context {
         // s_delegationManager = delegationManager;
     }
 
+    /// @dev Gets the underlying token amount from the amount of shares
+    function getTokenBalanceFromStrategy() external view returns (uint256) {
+        return IStrategy(STETH).userUnderlyingView(address(this));
+    }
+
     /// @dev Deposit tokens into the EigenLayer.  This call assumes any balance of tokens in this contract will be delegated
     /// so do not directly send tokens here or they will be delegated and attributed to the next caller.
     /// @return shares The amount of new shares in the `strategy` created as part of the action.
@@ -82,13 +89,13 @@ contract OperatorDelegator is IOperatorDelegator, Context {
         if (amount == 0) revert InvalidZeroInput();
 
         // Move the tokens into this contract
-        IERC20(stETH).safeTransferFrom(msg.sender, address(this), amount);
+        IERC20(STETH).safeTransferFrom(msg.sender, address(this), amount);
 
         // Approve the strategy manager to spend the tokens
-        IERC20(stETH).safeApprove(address(strategyManager), amount);
+        IERC20(STETH).safeApprove(address(strategyManager), amount);
 
         // Deposit the tokens via the strategy manager
         return
-            strategyManager.depositIntoStrategy(tokenStrategyMapping[_token], stETH, amount);
+            strategyManager.depositIntoStrategy(tokenStrategyMapping[_token], STETH, amount);
     }
 }

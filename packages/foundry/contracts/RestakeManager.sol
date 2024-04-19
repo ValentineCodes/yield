@@ -32,15 +32,17 @@ contract RestakeManager is IRestakeManager, ReentrancyGuard, Context {
         // checks
         if (amount == 0) revert InvalidDepositAmount();
 
+        // amount to mint taking into consideration the total stETH in the system and their appreciation over time based on staking rewards.
         uint256 yETHAmountToMint = i_oracle.calculateMintAmount(amount);
 
-        // interactions
+        // transfer stETH to this contract
         if (
             !IERC20(i_stETH).transferFrom(_msgSender(), address(this), amount)
         ) {
             revert TransferFailed();
         }
 
+        // mint yETH to user
         i_yEth.mint(_msgSender(), yETHAmountToMint);
 
         emit Deposit(_msgSender(), amount, yETHAmountToMint);
