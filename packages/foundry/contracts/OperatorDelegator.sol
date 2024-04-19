@@ -19,7 +19,9 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 import {IStrategy} from "./interfaces/IStrategy.sol";
 
-contract OperatorDelegator is IOperatorDelegator, Context {
+import {ReentrancyGuard} from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+
+contract OperatorDelegator is IOperatorDelegator, ReentrancyGuard, Context {
     using SafeERC20 for IERC20;
 
     /// @dev reference to the RoleManager contract
@@ -34,14 +36,10 @@ contract OperatorDelegator is IOperatorDelegator, Context {
     /// @dev the delegation manager contract
     // IDelegationManager public delegationManager;
 
-    /// @dev The mapping of supported token addresses to their respective strategy addresses
-    /// This will control which tokens are supported by the protocol
-    mapping(IERC20 => IStrategy) public tokenStrategyMapping;
-
     /// @dev The address to delegate tokens to in EigenLayer
     address public delegateAddress;
 
-    address constant STETH = 0x0;
+    address constant STETH = address(0);
 
     /// @dev Allows only a whitelisted address to configure the contract
     modifier onlyOperatorDelegatorAdmin() {
@@ -52,19 +50,18 @@ contract OperatorDelegator is IOperatorDelegator, Context {
 
     /// @dev Allows only the RestakeManager address to call functions
     modifier onlyRestakeManager() {
-        if (_msgSender() != address(restakeManager))
-            revert NotRestakeManager();
+        if (_msgSender() != address(restakeManager)) revert NotRestakeManager();
         _;
     }
 
     constructor(
         IRoleManager _roleManager,
         IStrategyManager _strategyManager,
-        IRestakeManager _restakeManager,
-        // IDelegationManager delegationManager
+        IRestakeManager _restakeManager // IDelegationManager delegationManager
     ) {
         if (address(_roleManager) == address(0x0)) revert InvalidZeroInput();
-        if (address(_strategyManager) == address(0x0)) revert InvalidZeroInput();
+        if (address(_strategyManager) == address(0x0))
+            revert InvalidZeroInput();
         if (address(_restakeManager) == address(0x0)) revert InvalidZeroInput();
         // if (address(delegationManager) == address(0x0))
         //     revert InvalidZeroInput();
@@ -86,6 +83,8 @@ contract OperatorDelegator is IOperatorDelegator, Context {
     function deposit(
         uint256 amount
     ) external nonReentrant onlyRestakeManager returns (uint256 shares) {
+        if (address(IStrategy(STETH)) == address(0x0))
+            revert InvalidZeroInput();
         if (amount == 0) revert InvalidZeroInput();
 
         // Move the tokens into this contract
@@ -96,6 +95,10 @@ contract OperatorDelegator is IOperatorDelegator, Context {
 
         // Deposit the tokens via the strategy manager
         return
-            strategyManager.depositIntoStrategy(tokenStrategyMapping[_token], STETH, amount);
+            strategyManager.depositIntoStrategy(
+                IStrategy(STETH),
+                IERC20(STETH),
+                amount
+            );
     }
 }
