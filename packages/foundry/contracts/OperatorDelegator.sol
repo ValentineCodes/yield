@@ -11,6 +11,8 @@ import {IRestakeManager} from "./interfaces/IRestakeManager.sol";
 
 import {IOperatorDelegator} from "./interfaces/IOperatorDelegator.sol";
 
+import {IDelegationManager} from "./interfaces/IDelegationManager.sol";
+
 import {Context} from "@openzeppelin/contracts/utils/Context.sol";
 
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
@@ -18,6 +20,8 @@ import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 import {IStrategy} from "./interfaces/IStrategy.sol";
+
+import {ISignatureUtils} from "./interfaces/ISignatureUtils.sol";
 
 import {ReentrancyGuard} from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 
@@ -34,10 +38,7 @@ contract OperatorDelegator is IOperatorDelegator, ReentrancyGuard, Context {
     IRestakeManager public restakeManager;
 
     /// @dev the delegation manager contract
-    // IDelegationManager public delegationManager;
-
-    /// @dev The address to delegate tokens to in EigenLayer
-    address public delegateAddress;
+    IDelegationManager public delegationManager;
 
     address constant STETH = address(0);
 
@@ -57,19 +58,28 @@ contract OperatorDelegator is IOperatorDelegator, ReentrancyGuard, Context {
     constructor(
         IRoleManager _roleManager,
         IStrategyManager _strategyManager,
-        IRestakeManager _restakeManager // IDelegationManager delegationManager
+        IRestakeManager _restakeManager,
+        IDelegationManager _delegationManager,
+        address operator
     ) {
         if (address(_roleManager) == address(0x0)) revert InvalidZeroInput();
         if (address(_strategyManager) == address(0x0))
             revert InvalidZeroInput();
         if (address(_restakeManager) == address(0x0)) revert InvalidZeroInput();
-        // if (address(delegationManager) == address(0x0))
-        //     revert InvalidZeroInput();
+        if (address(_delegationManager) == address(0x0))
+            revert InvalidZeroInput();
+        if (operator == address(0x0)) revert InvalidZeroInput();
 
         roleManager = _roleManager;
         strategyManager = _strategyManager;
         restakeManager = _restakeManager;
-        // s_delegationManager = delegationManager;
+        delegationManager = _delegationManager;
+
+        _delegationManager.delegateTo(
+            operator,
+            ISignatureUtils.SignatureWithExpiry(bytes(0), 0),
+            bytes32(0)
+        );
     }
 
     /// @dev Gets the underlying token amount from the amount of shares
