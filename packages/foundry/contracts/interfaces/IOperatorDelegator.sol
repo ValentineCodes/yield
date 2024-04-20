@@ -9,4 +9,6 @@ interface IOperatorDelegator {
     /// so do not directly send tokens here or they will be delegated and attributed to the next caller.
     /// @return shares The amount of new shares in the `strategy` created as part of the action.
     function deposit(uint256 amount) external returns (uint256 shares);
+
+    function undelegate() external returns (bytes32[] memory withdrawalRoot);
 }

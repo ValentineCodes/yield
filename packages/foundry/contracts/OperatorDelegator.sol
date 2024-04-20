@@ -75,6 +75,7 @@ contract OperatorDelegator is IOperatorDelegator, ReentrancyGuard, Context {
         restakeManager = _restakeManager;
         delegationManager = _delegationManager;
 
+        // Delegate this operatorDelegator to an operator
         _delegationManager.delegateTo(
             operator,
             ISignatureUtils.SignatureWithExpiry(bytes(0), 0),
@@ -110,5 +111,13 @@ contract OperatorDelegator is IOperatorDelegator, ReentrancyGuard, Context {
                 IERC20(STETH),
                 amount
             );
+    }
+
+    function undelegate()
+        external
+        onlyOperatorDelegatorAdmin
+        returns (bytes32[] memory withdrawalRoot)
+    {
+        return delegationManager.undelegate(address(this));
     }
 }
