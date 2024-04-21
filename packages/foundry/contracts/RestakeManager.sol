@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.19;
 
-import {IYieldOracle} from "./interfaces/IYieldOracle.sol";
-
 import {ReentrancyGuard} from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
@@ -17,12 +15,10 @@ import {IYEthToken} from "./interfaces/IYEthToken.sol";
 
 import {IOperatorDelegator} from "./interfaces/IOperatorDelegator.sol";
 
-import "./Errors/Errors.sol";
+import "./Errors.sol";
 
 contract RestakeManager is IRestakeManager, ReentrancyGuard, Context {
     using SafeERC20 for IERC20;
-
-    IYieldOracle immutable i_oracle;
 
     IYEthToken immutable i_yEth;
 
@@ -30,13 +26,7 @@ contract RestakeManager is IRestakeManager, ReentrancyGuard, Context {
 
     address immutable i_stETH;
 
-    constructor(
-        address oracle,
-        address stETH,
-        address yEth,
-        address operatorDelegator
-    ) {
-        i_oracle = IYieldOracle(oracle);
+    constructor(address stETH, address yEth, address operatorDelegator) {
         i_stETH = stETH;
         i_yEth = IYEthToken(yEth);
         i_operatorDelegator = IOperatorDelegator(operatorDelegator);
@@ -47,7 +37,7 @@ contract RestakeManager is IRestakeManager, ReentrancyGuard, Context {
         if (amount == 0) revert InvalidDepositAmount();
 
         // amount to mint taking into consideration the total stETH in the system and their appreciation over time based on staking rewards.
-        uint256 yETHAmountToMint = i_oracle.calculateMintAmount(amount);
+        uint256 yETHAmountToMint = getMintAmount(amount);
 
         // transfer stETH to this contract
         if (
@@ -69,5 +59,19 @@ contract RestakeManager is IRestakeManager, ReentrancyGuard, Context {
         i_yEth.mint(_msgSender(), yETHAmountToMint);
 
         emit Deposit(_msgSender(), amount, yETHAmountToMint);
+    }
+
+    /// @notice Determines the amount of yETH token to mint for every stETH deposit using the stETH/ETH conversion rate
+    /// @return Amount of yETH to mint
+    function getMintAmount(uint256 amount) external view returns (uint256) {
+        uint256 yETHTotalSupply = i_yEth.totalSupply();
+        uint256 stETHTVL = i_operatorDelegator.getTokenBalanceFromStrategy();
+
+        // For first mint, just return the new value added.
+        if (yETHTotalSupply == 0 || stETHTVL == 0) {
+            return amount;
+        }
+
+        return (amount * yETHTotalSupply) / stETHTVL;
     }
 }

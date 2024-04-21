@@ -20,12 +20,6 @@ interface IRoleManager {
         address potentialAddress
     ) external view returns (bool);
 
-    /// @dev Determines if the specified address has permission to update config on the Oracle Contract config
-    /// @param potentialAddress Address to check
-    function isOracleAdmin(
-        address potentialAddress
-    ) external view returns (bool);
-
     /// @dev Determines if the specified address has permission to update config on the Restake Manager
     /// @param potentialAddress Address to check
     function isRestakeManagerAdmin(
@@ -38,33 +32,9 @@ interface IRoleManager {
         address potentialAddress
     ) external view returns (bool);
 
-    /// @dev Determines if the specified address has permission to trigger restaking of native ETH
-    /// @param potentialAddress Address to check
-    function isNativeEthRestakeAdmin(
-        address potentialAddress
-    ) external view returns (bool);
-
-    /// @dev Determines if the specified address has permission to sweep and deposit ERC20 Rewards
-    /// @param potentialAddress Address to check
-    function isERC20RewardsAdmin(
-        address potentialAddress
-    ) external view returns (bool);
-
     /// @dev Determines if the specified address has permission to pause deposits and withdraws
     /// @param potentialAddress Address to check
     function isDepositWithdrawPauser(
-        address potentialAddress
-    ) external view returns (bool);
-
-    /// @dev Determines if the specified address has permission to set whitelisted origin in xRenzoBridge
-    /// @param potentialAddress Address to check
-    function isBridgeAdmin(
-        address potentialAddress
-    ) external view returns (bool);
-
-    /// @dev Determined if the specified address has permission to send price feed of yETH to L2
-    /// @param potentialAddress Address to check
-    function isPriceFeedSender(
         address potentialAddress
     ) external view returns (bool);
 }

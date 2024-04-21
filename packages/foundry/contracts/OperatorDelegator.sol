@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.19;
 
-import "./Errors/Errors.sol";
+import "./Errors.sol";
 
 import {IRoleManager} from "./interfaces/IRoleManager.sol";
 
@@ -29,18 +29,21 @@ contract OperatorDelegator is IOperatorDelegator, ReentrancyGuard, Context {
     using SafeERC20 for IERC20;
 
     /// @dev reference to the RoleManager contract
-    IRoleManager public roleManager;
+    IRoleManager private immutable roleManager;
 
     /// @dev The main strategy manager contract in EigenLayer
-    IStrategyManager public strategyManager;
+    IStrategyManager private immutable strategyManager;
 
     /// @dev the restake manager contract
-    IRestakeManager public restakeManager;
+    IRestakeManager private immutable restakeManager;
 
     /// @dev the delegation manager contract
-    IDelegationManager public delegationManager;
+    IDelegationManager private immutable delegationManager;
 
-    address constant STETH = address(0);
+    /// @dev the strategy for stETH
+    IStrategy private immutable stETHStrategy;
+
+    address immutable i_stETH;
 
     address immutable i_operator;
 
@@ -62,15 +65,15 @@ contract OperatorDelegator is IOperatorDelegator, ReentrancyGuard, Context {
         IStrategyManager _strategyManager,
         IRestakeManager _restakeManager,
         IDelegationManager _delegationManager,
-        address operator
+        address operator,
+        address stETH,
+        address _stETHStrategy
     ) {
-        if (address(_roleManager) == address(0x0)) revert InvalidZeroInput();
-        if (address(_strategyManager) == address(0x0))
-            revert InvalidZeroInput();
-        if (address(_restakeManager) == address(0x0)) revert InvalidZeroInput();
-        if (address(_delegationManager) == address(0x0))
-            revert InvalidZeroInput();
-        if (operator == address(0x0)) revert InvalidZeroInput();
+        if (address(_roleManager) == address(0x0)) revert ZeroAddress();
+        if (address(_strategyManager) == address(0x0)) revert ZeroAddress();
+        if (address(_restakeManager) == address(0x0)) revert ZeroAddress();
+        if (address(_delegationManager) == address(0x0)) revert ZeroAddress();
+        if (operator == address(0x0)) revert ZeroAddress();
 
         roleManager = _roleManager;
         strategyManager = _strategyManager;
@@ -85,11 +88,13 @@ contract OperatorDelegator is IOperatorDelegator, ReentrancyGuard, Context {
         );
 
         i_operator = operator;
+        i_stETH = stETH;
+        stETHStrategy = _stETHStrategy;
     }
 
     /// @dev Gets the underlying token amount from the amount of shares
     function getTokenBalanceFromStrategy() external view returns (uint256) {
-        return IStrategy(STETH).userUnderlyingView(address(this));
+        return stETHStrategy.userUnderlyingView(address(this));
     }
 
     /// @dev Deposit tokens into the EigenLayer.  This call assumes any balance of tokens in this contract will be delegated
@@ -98,21 +103,19 @@ contract OperatorDelegator is IOperatorDelegator, ReentrancyGuard, Context {
     function deposit(
         uint256 amount
     ) external nonReentrant onlyRestakeManager returns (uint256 shares) {
-        if (address(IStrategy(STETH)) == address(0x0))
-            revert InvalidZeroInput();
-        if (amount == 0) revert InvalidZeroInput();
+        if (address(stETHStrategy) == address(0x0)) revert ZeroAddress();
 
         // Move the tokens into this contract
-        IERC20(STETH).safeTransferFrom(msg.sender, address(this), amount);
+        IERC20(i_stETH).safeTransferFrom(_msgSender(), address(this), amount);
 
         // Approve the strategy manager to spend the tokens
-        IERC20(STETH).safeApprove(address(strategyManager), amount);
+        IERC20(i_stETH).safeApprove(address(strategyManager), amount);
 
         // Deposit the tokens via the strategy manager
         return
             strategyManager.depositIntoStrategy(
-                IStrategy(STETH),
-                IERC20(STETH),
+                stETHStrategy,
+                IERC20(i_stETH),
                 amount
             );
     }
@@ -135,7 +138,7 @@ contract OperatorDelegator is IOperatorDelegator, ReentrancyGuard, Context {
         for (uint256 i = 0; i < strategyLength; i++) {
             if (
                 strategyManager.stakerStrategyList(address(this), i) ==
-                IStrategy(STETH)
+                stETHStrategy
             ) {
                 return i;
             }
@@ -150,15 +153,14 @@ contract OperatorDelegator is IOperatorDelegator, ReentrancyGuard, Context {
         onlyOperatorDelegatorAdmin
         returns (bytes32)
     {
-        if (address(IStrategy(STETH)) == address(0x0))
-            revert InvalidZeroInput();
+        if (address(stETHStrategy) == address(0x0)) revert ZeroAddress();
 
-        uint256 shares = IStrategy(STETH).shares(address(this));
+        uint256 shares = stETHStrategy.shares(address(this));
 
         bytes32 withdrawalRoot = delegationManager.queueWithdrawals(
             [
                 IDelegationManager.QueuedWithdrawalParams(
-                    [IStrategy(STETH)],
+                    [stETHStrategy],
                     [shares],
                     address(this)
                 )
@@ -172,7 +174,7 @@ contract OperatorDelegator is IOperatorDelegator, ReentrancyGuard, Context {
             address(this),
             1,
             block.number,
-            [IStrategy(STETH)],
+            [stETHStrategy],
             [shares]
         );
 
@@ -185,7 +187,7 @@ contract OperatorDelegator is IOperatorDelegator, ReentrancyGuard, Context {
     ) external nonReentrant onlyOperatorDelegatorAdmin {
         delegationManager.completeQueuedWithdrawal(
             withdrawal,
-            [IERC20(STETH)],
+            [IERC20(i_stETH)],
             middlewareTimesIndex,
             true // Always get tokens and not share transfers
         );
