@@ -1,7 +1,16 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.19;
 
+import {IStrategy} from "./IStrategy.sol";
+
 interface IOperatorDelegator {
+    event WithdrawQueued(
+        bytes32 withdrawalRoot,
+        address staker,
+        IStrategy strategy,
+        uint256 shares
+    );
+
     /// @dev Gets the underlying token amount from the amount of shares
     function getTokenBalanceFromStrategy() external view returns (uint256);
 

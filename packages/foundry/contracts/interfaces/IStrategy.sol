@@ -14,24 +14,22 @@ interface IStrategy {
      * @notice Used to deposit tokens into this Strategy
      * @param token is the ERC20 token being deposited
      * @param amount is the amount of token being deposited
-     * @dev This function is only callable by the strategyManager contract. It is invoked inside of the
-     * strategyManager's
+     * @dev This function is only callable by the strategyManager contract. It is invoked inside of the strategyManager's
      * `depositIntoStrategy` function, and individual share balances are recorded in the strategyManager as well.
      * @return newShares is the number of new shares issued at the current exchange ratio.
      */
     function deposit(IERC20 token, uint256 amount) external returns (uint256);
 
     /**
-     * @notice Used to withdraw tokens from this Strategy, to the `depositor`'s address
-     * @param depositor is the address to receive the withdrawn funds
+     * @notice Used to withdraw tokens from this Strategy, to the `recipient`'s address
+     * @param recipient is the address to receive the withdrawn funds
      * @param token is the ERC20 token being transferred out
      * @param amountShares is the amount of shares being withdrawn
-     * @dev This function is only callable by the strategyManager contract. It is invoked inside of the
-     * strategyManager's
+     * @dev This function is only callable by the strategyManager contract. It is invoked inside of the strategyManager's
      * other functions, and individual share balances are recorded in the strategyManager as well.
      */
     function withdraw(
-        address depositor,
+        address recipient,
         IERC20 token,
         uint256 amountShares
     ) external;
@@ -63,6 +61,12 @@ interface IStrategy {
      * this strategy. In contrast to `userUnderlyingView`, this function **may** make state modifications
      */
     function userUnderlying(address user) external returns (uint256);
+
+    /**
+     * @notice convenience function for fetching the current total shares of `user` in this strategy, by
+     * querying the `strategyManager` contract
+     */
+    function shares(address user) external view returns (uint256);
 
     /**
      * @notice Used to convert a number of shares to the equivalent amount of underlying tokens for this strategy.
@@ -98,7 +102,6 @@ interface IStrategy {
     /// @notice The total number of extant shares in this Strategy
     function totalShares() external view returns (uint256);
 
-    /// @notice Returns either a brief string explaining the strategy's goal & purpose, or a link to metadata that
-    /// explains in more detail.
+    /// @notice Returns either a brief string explaining the strategy's goal & purpose, or a link to metadata that explains in more detail.
     function explanation() external view returns (string memory);
 }

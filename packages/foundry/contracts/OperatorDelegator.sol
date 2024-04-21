@@ -120,4 +120,54 @@ contract OperatorDelegator is IOperatorDelegator, ReentrancyGuard, Context {
     {
         return delegationManager.undelegate(address(this));
     }
+
+    /// @dev Gets the index of the strategy in EigenLayer in the staker's strategy list
+    function getStrategyIndex() public view returns (uint256) {
+        // Get the length of the strategy list for this contract
+        uint256 strategyLength = strategyManager.stakerStrategyListLength(
+            address(this)
+        );
+
+        for (uint256 i = 0; i < strategyLength; i++) {
+            if (
+                strategyManager.stakerStrategyList(address(this), i) ==
+                IStrategy(STETH)
+            ) {
+                return i;
+            }
+        }
+
+        // Not found
+        revert NotFound();
+    }
+
+    function queueWithdrawal()
+        external
+        onlyOperatorDelegatorAdmin
+        returns (bytes32)
+    {
+        if (address(IStrategy(STETH)) == address(0x0))
+            revert InvalidZeroInput();
+
+        uint256 shares = IStrategy(STETH).shares(address(this));
+
+        bytes32 withdrawalRoot = delegationManager.queueWithdrawals(
+            [
+                IDelegationManager.QueuedWithdrawalParams(
+                    [IStrategy(STETH)],
+                    [shares],
+                    address(this)
+                )
+            ]
+        );
+
+        emit WithdrawQueued(
+            withdrawalRoot,
+            address(this),
+            IStrategy(STETH),
+            shares
+        );
+
+        return withdrawalRoot;
+    }
 }
