@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.19;
 
-import "./Errors.sol";
-
 import {IRoleManager} from "./interfaces/IRoleManager.sol";
 
 import {IStrategyManager} from "./interfaces/IStrategyManager.sol";
@@ -25,6 +23,14 @@ import {ISignatureUtils} from "./interfaces/ISignatureUtils.sol";
 
 import {ReentrancyGuard} from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 
+import "./Errors.sol";
+
+/**
+ * @dev This contract will be responsible for interacting with Eigenlayer
+ * This contract will be delegated to an operator on deployment
+ * This contract handled all stETH tokens, all of which will be delegated to an operator
+ * Only the RestakeManager should be interacting with this contract for EL interactions.
+ */
 contract OperatorDelegator is IOperatorDelegator, ReentrancyGuard, Context {
     using SafeERC20 for IERC20;
 
@@ -40,13 +46,16 @@ contract OperatorDelegator is IOperatorDelegator, ReentrancyGuard, Context {
     /// @dev the delegation manager contract
     IDelegationManager private immutable delegationManager;
 
-    /// @dev the strategy for stETH
-    IStrategy private immutable stETHStrategy;
+    /// @dev the strategy contract for stETH
+    IStrategy private immutable strategy;
 
+    /// @dev the yETH token contract
     IYEthToken private immutable yEth;
 
+    /// @dev address of the stETH token
     address immutable i_stETH;
 
+    /// @dev address of the operator that manages deposits on EigenLayer
     address immutable i_operator;
 
     /// @dev Allows only a whitelisted address to configure the contract
@@ -70,7 +79,7 @@ contract OperatorDelegator is IOperatorDelegator, ReentrancyGuard, Context {
         IYEthToken _yEth,
         address operator,
         address stETH,
-        address _stETHStrategy,
+        address _strategy,
     ) {
         if (address(_roleManager) == address(0x0)) revert ZeroAddress();
         if (address(_strategyManager) == address(0x0)) revert ZeroAddress();
@@ -84,7 +93,7 @@ contract OperatorDelegator is IOperatorDelegator, ReentrancyGuard, Context {
         restakeManager = _restakeManager;
         delegationManager = _delegationManager;
 
-        // Delegate this operatorDelegator to an operator
+        // Delegate this contract to an operator
         _delegationManager.delegateTo(
             operator,
             ISignatureUtils.SignatureWithExpiry(bytes(0), 0),
@@ -93,12 +102,12 @@ contract OperatorDelegator is IOperatorDelegator, ReentrancyGuard, Context {
 
         i_operator = operator;
         i_stETH = stETH;
-        stETHStrategy = _stETHStrategy;
+        strategy = _strategy;
     }
 
     /// @dev Gets the underlying token amount from the amount of shares
     function getTokenBalanceFromStrategy() public view returns (uint256) {
-        return stETHStrategy.userUnderlyingView(address(this));
+        return strategy.userUnderlyingView(address(this));
     }
 
     /// @dev Deposit tokens into the EigenLayer.  This call assumes any balance of tokens in this contract will be delegated
@@ -107,7 +116,7 @@ contract OperatorDelegator is IOperatorDelegator, ReentrancyGuard, Context {
     function deposit(
         uint256 amount
     ) external nonReentrant onlyRestakeManager returns (uint256 shares) {
-        if (address(stETHStrategy) == address(0x0)) revert ZeroAddress();
+        if (address(strategy) == address(0x0)) revert ZeroAddress();
 
         // Move the tokens into this contract
         IERC20(i_stETH).safeTransferFrom(_msgSender(), address(this), amount);
@@ -118,12 +127,17 @@ contract OperatorDelegator is IOperatorDelegator, ReentrancyGuard, Context {
         // Deposit the tokens via the strategy manager
         return
             strategyManager.depositIntoStrategy(
-                stETHStrategy,
+                strategy,
                 IERC20(i_stETH),
                 amount
             );
     }
 
+    /**
+     * @notice Undelegates the operator of this contract 
+     * @dev Only the operator delegator admin can call this
+     * @return Returns the withdrawal root
+     */
     function undelegate()
         external
         onlyOperatorDelegatorAdmin
@@ -142,7 +156,7 @@ contract OperatorDelegator is IOperatorDelegator, ReentrancyGuard, Context {
         for (uint256 i = 0; i < strategyLength; i++) {
             if (
                 strategyManager.stakerStrategyList(address(this), i) ==
-                stETHStrategy
+                strategy
             ) {
                 return i;
             }
@@ -152,19 +166,26 @@ contract OperatorDelegator is IOperatorDelegator, ReentrancyGuard, Context {
         revert NotFound();
     }
 
+    /**
+     * @notice Queues withdrawal on EigenLayer
+     * @dev Only the operator delegator admin can call this
+     * @return The withdrawal root
+     */
     function queueWithdrawal()
         external
         onlyOperatorDelegatorAdmin
         returns (bytes32)
     {
-        if (address(stETHStrategy) == address(0x0)) revert ZeroAddress();
+        if (address(strategy) == address(0x0)) revert ZeroAddress();
 
-        uint256 shares = stETHStrategy.shares(address(this));
+        // retrieve the total shares of this contract on EigenLayer
+        uint256 shares = strategy.shares(address(this));
 
+        // queue withdrawals on EigenLayer
         bytes32 withdrawalRoot = delegationManager.queueWithdrawals(
             [
                 IDelegationManager.QueuedWithdrawalParams(
-                    [stETHStrategy],
+                    [strategy],
                     [shares],
                     address(this)
                 )
@@ -178,13 +199,19 @@ contract OperatorDelegator is IOperatorDelegator, ReentrancyGuard, Context {
             address(this),
             1,
             block.number,
-            [stETHStrategy],
+            [strategy],
             [shares]
         );
 
         return withdrawalRoot;
     }
 
+    /**
+     * @notice Completes withdrawal on EigenLayer
+     * @dev Only the operator delegator admin can call this
+     * @param withdrawal The withdrawal params
+     * @param middlewareTimesIndex
+     */
     function completeWithdrawal(
         IStrategyManager.QueuedWithdrawal calldata withdrawal,
         uint256 middlewareTimesIndex
@@ -197,24 +224,8 @@ contract OperatorDelegator is IOperatorDelegator, ReentrancyGuard, Context {
         );
     }
 
-    function withdraw(uint256 amount) external nonReentrant {
-        if(amount == 0) revert InvalidZeroInput();
-        if(amount > yETH.balanceOf(_msgSender())) revert InsufficientFunds();
-
-        uint256 withdrawAmount = getWithdrawAmount(amount);
-
-        yETH.burn(amount);
-
-        IERC20(i_stETH).safeTransfer(_msgSender(), withdrawAmount);
-
-        emit Withdraw(withdrawAmount, amount);
-    }
-
-    function getWithdrawAmount(uint256 amount) public view returns (uint256) {
-        uint256 yETHTotalSupply = yEth.totalSupply();
-
-        if(address(this).balance == 0) revert NoWithdrawnFunds();
-
-        return (amount * address(this).balance) / yETHTotalSupply;
+    /// @dev Transfer stETH token to staker
+    function transferTokenToStaker(address staker, uint256 amount) external onlyRestakeManager {
+        IERC20(i_stETH).safeTransfer(staker, amount);
     }
 }

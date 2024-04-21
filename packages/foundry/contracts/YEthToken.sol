@@ -6,8 +6,12 @@ import "../interfaces/IYEthToken.sol";
 import "../Permissions/IRoleManager.sol";
 import "./Errors.sol";
 
-/// @dev This contract is the yETH ERC20 token
-/// Ownership of the collateral in the protocol is tracked by the yETH token
+/**
+ * @title Yield ETH token
+ * @author Yield
+ * @notice This contract is the yETH ERC20 token
+ * Ownership of the collateral in the protocol is tracked by the yETH token
+ */
 contract YEthToken is ERC20, IYEthToken {
     /// @dev reference to the RoleManager contract
     IRoleManager public roleManager;
