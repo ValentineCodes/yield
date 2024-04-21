@@ -178,4 +178,16 @@ contract OperatorDelegator is IOperatorDelegator, ReentrancyGuard, Context {
 
         return withdrawalRoot;
     }
+
+    function completeWithdrawal(
+        IStrategyManager.QueuedWithdrawal calldata withdrawal,
+        uint256 middlewareTimesIndex
+    ) external nonReentrant onlyOperatorDelegatorAdmin {
+        delegationManager.completeQueuedWithdrawal(
+            withdrawal,
+            [IERC20(STETH)],
+            middlewareTimesIndex,
+            true // Always get tokens and not share transfers
+        );
+    }
 }
