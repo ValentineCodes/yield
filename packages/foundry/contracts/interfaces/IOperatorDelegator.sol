@@ -15,6 +15,8 @@ interface IOperatorDelegator {
         uint256[] shares
     );
 
+    event Withdraw(uint256 amountWithdraw, uint256 amountBurned);
+
     /// @dev Gets the underlying token amount from the amount of shares
     function getTokenBalanceFromStrategy() external view returns (uint256);
 

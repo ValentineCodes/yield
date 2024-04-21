@@ -1,6 +1,12 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.19;
 
+/// @dev Error when operator delegator balance is 0
+error NoWithdrawnFunds();
+
+/// @dev Error when user does not have enough balance
+error InsufficientFunds();
+
 /// @dev Error for 0x0 address inputs
 error ZeroAddress();
 
@@ -81,6 +87,9 @@ error InvalidTokenReceived();
 
 /// @dev Error when the sender is not expected
 error InvalidSender(address expectedSender, address actualSender);
+
+/// @dev Error when input amount is 0
+error InvalidZeroInput
 
 /// @dev error when function returns 0 amount
 error InvalidZeroOutput();

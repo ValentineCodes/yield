@@ -43,6 +43,8 @@ contract OperatorDelegator is IOperatorDelegator, ReentrancyGuard, Context {
     /// @dev the strategy for stETH
     IStrategy private immutable stETHStrategy;
 
+    IYEthToken private immutable yEth;
+
     address immutable i_stETH;
 
     address immutable i_operator;
@@ -65,14 +67,16 @@ contract OperatorDelegator is IOperatorDelegator, ReentrancyGuard, Context {
         IStrategyManager _strategyManager,
         IRestakeManager _restakeManager,
         IDelegationManager _delegationManager,
+        IYEthToken _yEth,
         address operator,
         address stETH,
-        address _stETHStrategy
+        address _stETHStrategy,
     ) {
         if (address(_roleManager) == address(0x0)) revert ZeroAddress();
         if (address(_strategyManager) == address(0x0)) revert ZeroAddress();
         if (address(_restakeManager) == address(0x0)) revert ZeroAddress();
         if (address(_delegationManager) == address(0x0)) revert ZeroAddress();
+        if (address(_yEth) == address(0x0)) revert ZeroAddress();
         if (operator == address(0x0)) revert ZeroAddress();
 
         roleManager = _roleManager;
@@ -93,7 +97,7 @@ contract OperatorDelegator is IOperatorDelegator, ReentrancyGuard, Context {
     }
 
     /// @dev Gets the underlying token amount from the amount of shares
-    function getTokenBalanceFromStrategy() external view returns (uint256) {
+    function getTokenBalanceFromStrategy() public view returns (uint256) {
         return stETHStrategy.userUnderlyingView(address(this));
     }
 
@@ -191,5 +195,26 @@ contract OperatorDelegator is IOperatorDelegator, ReentrancyGuard, Context {
             middlewareTimesIndex,
             true // Always get tokens and not share transfers
         );
+    }
+
+    function withdraw(uint256 amount) external nonReentrant {
+        if(amount == 0) revert InvalidZeroInput();
+        if(amount > yETH.balanceOf(_msgSender())) revert InsufficientFunds();
+
+        uint256 withdrawAmount = getWithdrawAmount(amount);
+
+        yETH.burn(amount);
+
+        IERC20(i_stETH).safeTransfer(_msgSender(), withdrawAmount);
+
+        emit Withdraw(withdrawAmount, amount);
+    }
+
+    function getWithdrawAmount(uint256 amount) public view returns (uint256) {
+        uint256 yETHTotalSupply = yEth.totalSupply();
+
+        if(address(this).balance == 0) revert NoWithdrawnFunds();
+
+        return (amount * address(this).balance) / yETHTotalSupply;
     }
 }

@@ -63,7 +63,7 @@ contract RestakeManager is IRestakeManager, ReentrancyGuard, Context {
 
     /// @notice Determines the amount of yETH token to mint for every stETH deposit using the stETH/ETH conversion rate
     /// @return Amount of yETH to mint
-    function getMintAmount(uint256 amount) external view returns (uint256) {
+    function getMintAmount(uint256 amount) public view returns (uint256) {
         uint256 yETHTotalSupply = i_yEth.totalSupply();
         uint256 stETHTVL = i_operatorDelegator.getTokenBalanceFromStrategy();
 
