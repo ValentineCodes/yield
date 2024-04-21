@@ -5,10 +5,14 @@ import {IStrategy} from "./IStrategy.sol";
 
 interface IOperatorDelegator {
     event WithdrawQueued(
-        bytes32 withdrawalRoot,
+        bytes32 withdrawRoot,
         address staker,
-        IStrategy strategy,
-        uint256 shares
+        address delegatedTo,
+        address withdrawer,
+        uint nonce,
+        uint startBlock,
+        IStrategy[] strategies,
+        uint256[] shares
     );
 
     /// @dev Gets the underlying token amount from the amount of shares

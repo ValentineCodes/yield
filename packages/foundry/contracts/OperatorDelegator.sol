@@ -42,6 +42,8 @@ contract OperatorDelegator is IOperatorDelegator, ReentrancyGuard, Context {
 
     address constant STETH = address(0);
 
+    address immutable i_operator;
+
     /// @dev Allows only a whitelisted address to configure the contract
     modifier onlyOperatorDelegatorAdmin() {
         if (!roleManager.isOperatorDelegatorAdmin(_msgSender()))
@@ -81,6 +83,8 @@ contract OperatorDelegator is IOperatorDelegator, ReentrancyGuard, Context {
             ISignatureUtils.SignatureWithExpiry(bytes(0), 0),
             bytes32(0)
         );
+
+        i_operator = operator;
     }
 
     /// @dev Gets the underlying token amount from the amount of shares
@@ -164,8 +168,12 @@ contract OperatorDelegator is IOperatorDelegator, ReentrancyGuard, Context {
         emit WithdrawQueued(
             withdrawalRoot,
             address(this),
-            IStrategy(STETH),
-            shares
+            i_operator,
+            address(this),
+            1,
+            block.number,
+            [IStrategy(STETH)],
+            [shares]
         );
 
         return withdrawalRoot;
