@@ -2,6 +2,7 @@
 pragma solidity 0.8.19;
 
 import {ReentrancyGuard} from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+import {Initializer} from "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {Context} from "@openzeppelin/contracts/utils/Context.sol";
@@ -17,7 +18,12 @@ import "./Errors.sol";
             Users will interact with this contract to deposit and withdraw value into and from EigenLayer
             Ownership of deposited funds will be tracked via the ezETh token
  */
-contract RestakeManager is IRestakeManager, ReentrancyGuard, Context {
+contract RestakeManager is
+    IRestakeManager,
+    Initializable,
+    ReentrancyGuard,
+    Context
+{
     using SafeERC20 for IERC20;
 
     /// @dev the yETH token contract
@@ -29,7 +35,16 @@ contract RestakeManager is IRestakeManager, ReentrancyGuard, Context {
     /// @dev address of the stETH token
     address immutable i_stETH;
 
-    constructor(address stETH, address yEth, address operatorDelegator) {
+    constructor() {
+        _disableInitializers();
+    }
+
+    /// @dev Initializes the contract with initial vars
+    function initialize(
+        address stETH,
+        address yEth,
+        address operatorDelegator
+    ) external initializer {
         i_stETH = stETH;
         i_yEth = IYEthToken(yEth);
         i_operatorDelegator = IOperatorDelegator(operatorDelegator);
