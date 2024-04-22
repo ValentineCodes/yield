@@ -76,10 +76,10 @@ contract OperatorDelegator is IOperatorDelegator, ReentrancyGuard, Context {
         IStrategyManager _strategyManager,
         IRestakeManager _restakeManager,
         IDelegationManager _delegationManager,
+        IStrategy _strategy,
         IYEthToken _yEth,
         address operator,
-        address stETH,
-        address _strategy,
+        address stETH
     ) {
         if (address(_roleManager) == address(0x0)) revert ZeroAddress();
         if (address(_strategyManager) == address(0x0)) revert ZeroAddress();
@@ -92,6 +92,7 @@ contract OperatorDelegator is IOperatorDelegator, ReentrancyGuard, Context {
         strategyManager = _strategyManager;
         restakeManager = _restakeManager;
         delegationManager = _delegationManager;
+        strategy = _strategy;
 
         // Delegate this contract to an operator
         _delegationManager.delegateTo(
@@ -102,7 +103,6 @@ contract OperatorDelegator is IOperatorDelegator, ReentrancyGuard, Context {
 
         i_operator = operator;
         i_stETH = stETH;
-        strategy = _strategy;
     }
 
     /// @dev Gets the underlying token amount from the amount of shares
@@ -134,7 +134,7 @@ contract OperatorDelegator is IOperatorDelegator, ReentrancyGuard, Context {
     }
 
     /**
-     * @notice Undelegates the operator of this contract 
+     * @notice Undelegates the operator of this contract
      * @dev Only the operator delegator admin can call this
      * @return Returns the withdrawal root
      */
@@ -155,8 +155,7 @@ contract OperatorDelegator is IOperatorDelegator, ReentrancyGuard, Context {
 
         for (uint256 i = 0; i < strategyLength; i++) {
             if (
-                strategyManager.stakerStrategyList(address(this), i) ==
-                strategy
+                strategyManager.stakerStrategyList(address(this), i) == strategy
             ) {
                 return i;
             }
@@ -225,7 +224,10 @@ contract OperatorDelegator is IOperatorDelegator, ReentrancyGuard, Context {
     }
 
     /// @dev Transfer stETH token to staker
-    function transferTokenToStaker(address staker, uint256 amount) external onlyRestakeManager {
+    function transferTokenToStaker(
+        address staker,
+        uint256 amount
+    ) external onlyRestakeManager {
         IERC20(i_stETH).safeTransfer(staker, amount);
     }
 }
