@@ -2,7 +2,6 @@
 pragma solidity 0.8.19;
 
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import {Context} from "@openzeppelin/contracts/utils/Context.sol";
 import {IYEthToken} from "./interfaces/IYEthToken.sol";
 import {IRoleManager} from "./interfaces/IRoleManager.sol";
 import "./Errors.sol";
@@ -13,7 +12,7 @@ import "./Errors.sol";
  * @notice This contract is the yETH ERC20 token
  * Ownership of the collateral in the protocol is tracked by the yETH token
  */
-contract YEthToken is ERC20, IYEthToken, Context {
+contract YEthToken is IYEthToken, ERC20 {
     /// @dev reference to the RoleManager contract
     IRoleManager public roleManager;
 
@@ -22,14 +21,14 @@ contract YEthToken is ERC20, IYEthToken, Context {
 
     /// @dev Allows only a whitelisted address to mint or burn yETH tokens
     modifier onlyMinterBurner() {
-        if (!roleManager.isYETHMinterBurner(_msgSender()))
+        if (!roleManager.isYETHMinterBurner(msg.sender))
             revert NotYETHMinterBurner();
         _;
     }
 
     /// @dev Allows only a whitelisted address to pause or unpause the token
     modifier onlyTokenAdmin() {
-        if (!roleManager.isTokenAdmin(_msgSender())) revert NotTokenAdmin();
+        if (!roleManager.isTokenAdmin(msg.sender)) revert NotTokenAdmin();
         _;
     }
 
