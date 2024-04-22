@@ -12,8 +12,8 @@ import "./Errors.sol";
 /// if a malicious account was able to obtain the role, they could use it to grant permissions to malicious accounts.
 contract RoleManager is IRoleManager, AccessControl {
     /// @dev role for granting capability to mint/burn yETH
-    bytes32 public constant RX_ETH_MINTER_BURNER =
-        keccak256("RX_ETH_MINTER_BURNER");
+    bytes32 public constant Y_ETH_MINTER_BURNER =
+        keccak256("Y_ETH_MINTER_BURNER");
 
     /// @dev role for granting capability to update config on the OperatorDelgator Contracts
     bytes32 public constant OPERATOR_DELEGATOR_ADMIN =
@@ -34,6 +34,11 @@ contract RoleManager is IRoleManager, AccessControl {
         if (address(roleManagerAdmin) == address(0x0)) revert ZeroAddress();
 
         _grantRole(DEFAULT_ADMIN_ROLE, roleManagerAdmin);
+        _grantRole(Y_ETH_MINTER_BURNER, roleManagerAdmin);
+        _grantRole(OPERATOR_DELEGATOR_ADMIN, roleManagerAdmin);
+        _grantRole(RESTAKE_MANAGER_ADMIN, roleManagerAdmin);
+        _grantRole(TOKEN_ADMIN, roleManagerAdmin);
+        _grantRole(DEPOSIT_WITHDRAW_PAUSER, roleManagerAdmin);
     }
 
     /// @dev Determines if the specified address has permissions to manage RoleManager
@@ -49,7 +54,7 @@ contract RoleManager is IRoleManager, AccessControl {
     function isYETHMinterBurner(
         address potentialAddress
     ) external view returns (bool) {
-        return hasRole(RX_ETH_MINTER_BURNER, potentialAddress);
+        return hasRole(Y_ETH_MINTER_BURNER, potentialAddress);
     }
 
     /// @dev Determines if the specified address has permission to update config on the OperatorDelgator Contracts

@@ -14,7 +14,9 @@ contract RoleManagerTest is Test {
         roleManager = new RoleManager(roleManagerAdmin);
     }
 
-    function testDefaultAdminIsRoleManagerAdmin() public {
-        assert(true);
+    function testRoleGrant() public view {
+        assert(
+            roleManager.isRoleManagerAdmin(roleManagerAdmin)
+        );
     }
 }
