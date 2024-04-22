@@ -37,9 +37,6 @@ contract RoleManager is IRoleManager, AccessControl {
         _grantRole(DEFAULT_ADMIN_ROLE, roleManagerAdmin);
     }
 
-    /// @dev initializer to call after deployment, can only be called once
-    function initialize() public initializer {}
-
     /// @dev Determines if the specified address has permissions to manage RoleManager
     /// @param potentialAddress Address to check
     function isRoleManagerAdmin(
