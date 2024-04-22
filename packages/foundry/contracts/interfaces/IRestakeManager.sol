@@ -26,11 +26,11 @@ interface IRestakeManager {
      * @notice Determines the amount of yETH tokens to mint for every stETH deposit using the stETH/ETH conversion rate
      * @return Amount of yETH tokens to mint
      */
-    function getMintAmount(uint256 amount) public view returns (uint256);
+    function getMintAmount(uint256 amount) external view returns (uint256);
 
     /**
      * @notice Determines the amount of stETH tokens to withdraw
      * @return Amount of stETH tokens to withdraw
      */
-    function getWithdrawAmount(uint256 amount) public view returns (uint256);
+    function getWithdrawAmount(uint256 amount) external view returns (uint256);
 }

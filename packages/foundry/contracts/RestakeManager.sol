@@ -2,7 +2,7 @@
 pragma solidity 0.8.19;
 
 import {ReentrancyGuard} from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
-import {Initializer} from "@openzeppelin/contracts/proxy/utils/Initializable.sol";
+import {Initializable} from "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {Context} from "@openzeppelin/contracts/utils/Context.sol";
@@ -27,13 +27,13 @@ contract RestakeManager is
     using SafeERC20 for IERC20;
 
     /// @dev the yETH token contract
-    IYEthToken immutable i_yEth;
+    IYEthToken private i_yEth;
 
     /// @dev the operator delegator contract
-    IOperatorDelegator immutable i_operatorDelegator;
+    IOperatorDelegator private i_operatorDelegator;
 
     /// @dev address of the stETH token
-    address immutable i_stETH;
+    address private i_stETH;
 
     constructor() {
         _disableInitializers();
@@ -97,7 +97,7 @@ contract RestakeManager is
         uint256 withdrawAmount = getWithdrawAmount(amount);
 
         // Burn yETH tokens
-        i_yEth.burn(amount);
+        i_yEth.burn(_msgSender(), amount);
 
         // Transfer stETH token to staker
         i_operatorDelegator.transferTokenToStaker(_msgSender(), withdrawAmount);
@@ -122,7 +122,7 @@ contract RestakeManager is
     /// @notice Determines the amount of stETH tokens to withdraw
     /// @return Amount of stETH tokens to withdraw
     function getWithdrawAmount(uint256 amount) public view returns (uint256) {
-        uint256 yETHTotalSupply = yEth.totalSupply();
+        uint256 yETHTotalSupply = i_yEth.totalSupply();
         uint256 stETHTVL = address(i_operatorDelegator).balance;
 
         if (stETHTVL == 0) revert NoWithdrawnFunds();

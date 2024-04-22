@@ -1,7 +1,7 @@
 //SPDX-License-Identifier: MIT
 pragma solidity ^0.8.19;
 
-import "../contracts/YourContract.sol";
+import "../contracts/RoleManager.sol";
 import "./DeployHelpers.s.sol";
 
 contract DeployScript is ScaffoldETHDeploy {
@@ -15,13 +15,11 @@ contract DeployScript is ScaffoldETHDeploy {
             );
         }
         vm.startBroadcast(deployerPrivateKey);
-        YourContract yourContract = new YourContract(
-            vm.addr(deployerPrivateKey)
-        );
+        RoleManager roleManager = new RoleManager(vm.addr(deployerPrivateKey));
         console.logString(
             string.concat(
-                "YourContract deployed at: ",
-                vm.toString(address(yourContract))
+                "RoleManager deployed at: ",
+                vm.toString(address(roleManager))
             )
         );
         vm.stopBroadcast();

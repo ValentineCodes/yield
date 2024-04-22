@@ -2,8 +2,8 @@
 pragma solidity 0.8.19;
 
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import "../interfaces/IYEthToken.sol";
-import "../Permissions/IRoleManager.sol";
+import "./interfaces/IYEthToken.sol";
+import "./interfaces/IRoleManager.sol";
 import "./Errors.sol";
 
 /**
@@ -61,7 +61,7 @@ contract YEthToken is ERC20, IYEthToken {
         super._beforeTokenTransfer(from, to, amount);
 
         // If not paused return success
-        if (!paused) {
+        if (!s_paused) {
             return;
         }
 

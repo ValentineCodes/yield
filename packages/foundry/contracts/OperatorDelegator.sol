@@ -22,7 +22,7 @@ import {IStrategy} from "./interfaces/IStrategy.sol";
 import {ISignatureUtils} from "./interfaces/ISignatureUtils.sol";
 
 import {ReentrancyGuard} from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
-
+import {IYEthToken} from "./interfaces/IYEthToken.sol";
 import "./Errors.sol";
 
 /**
@@ -49,9 +49,6 @@ contract OperatorDelegator is IOperatorDelegator, ReentrancyGuard, Context {
     /// @dev the strategy contract for stETH
     IStrategy private immutable strategy;
 
-    /// @dev the yETH token contract
-    IYEthToken private immutable yEth;
-
     /// @dev address of the stETH token
     address immutable i_stETH;
 
@@ -77,7 +74,6 @@ contract OperatorDelegator is IOperatorDelegator, ReentrancyGuard, Context {
         IRestakeManager _restakeManager,
         IDelegationManager _delegationManager,
         IStrategy _strategy,
-        IYEthToken _yEth,
         address operator,
         address stETH
     ) {
@@ -85,7 +81,6 @@ contract OperatorDelegator is IOperatorDelegator, ReentrancyGuard, Context {
         if (address(_strategyManager) == address(0x0)) revert ZeroAddress();
         if (address(_restakeManager) == address(0x0)) revert ZeroAddress();
         if (address(_delegationManager) == address(0x0)) revert ZeroAddress();
-        if (address(_yEth) == address(0x0)) revert ZeroAddress();
         if (operator == address(0x0)) revert ZeroAddress();
 
         roleManager = _roleManager;
@@ -97,8 +92,8 @@ contract OperatorDelegator is IOperatorDelegator, ReentrancyGuard, Context {
         // Delegate this contract to an operator
         _delegationManager.delegateTo(
             operator,
-            ISignatureUtils.SignatureWithExpiry(bytes(0), 0),
-            bytes32(0)
+            ISignatureUtils.SignatureWithExpiry(bytes(""), 0),
+            bytes32("")
         );
 
         i_operator = operator;
@@ -136,7 +131,7 @@ contract OperatorDelegator is IOperatorDelegator, ReentrancyGuard, Context {
     /**
      * @notice Undelegates the operator of this contract
      * @dev Only the operator delegator admin can call this
-     * @return Returns the withdrawal root
+     * @return withdrawalRoot Returns the withdrawal root
      */
     function undelegate()
         external
@@ -155,7 +150,7 @@ contract OperatorDelegator is IOperatorDelegator, ReentrancyGuard, Context {
 
         for (uint256 i = 0; i < strategyLength; i++) {
             if (
-                strategyManager.stakerStrategyList(address(this), i) == strategy
+                strategyManager.stakerStrategyList(address(this))[i] == strategy
             ) {
                 return i;
             }
@@ -177,47 +172,53 @@ contract OperatorDelegator is IOperatorDelegator, ReentrancyGuard, Context {
     {
         if (address(strategy) == address(0x0)) revert ZeroAddress();
 
+        IStrategy[] memory strategiesToWithdraw = new IStrategy[](1);
+        strategiesToWithdraw[0] = strategy;
+
         // retrieve the total shares of this contract on EigenLayer
-        uint256 shares = strategy.shares(address(this));
+        uint256[] memory amountsToWithdraw = new uint256[](1);
+        amountsToWithdraw[0] = strategy.shares(address(this));
+
+        IDelegationManager.QueuedWithdrawalParams[] memory queuedWithdrawalParams = new IDelegationManager.QueuedWithdrawalParams[](1);
+        queuedWithdrawalParams[0] = IDelegationManager.QueuedWithdrawalParams(
+                    strategiesToWithdraw,
+                    amountsToWithdraw,
+                    address(this)
+                );
 
         // queue withdrawals on EigenLayer
-        bytes32 withdrawalRoot = delegationManager.queueWithdrawals(
-            [
-                IDelegationManager.QueuedWithdrawalParams(
-                    [strategy],
-                    [shares],
-                    address(this)
-                )
-            ]
-        );
+        bytes32[] memory withdrawalRoots = delegationManager.queueWithdrawals(queuedWithdrawalParams);
 
         emit WithdrawQueued(
-            withdrawalRoot,
+            withdrawalRoots[0],
             address(this),
             i_operator,
             address(this),
             1,
             block.number,
-            [strategy],
-            [shares]
+            strategiesToWithdraw,
+            amountsToWithdraw
         );
 
-        return withdrawalRoot;
+        return withdrawalRoots[0];
     }
 
     /**
      * @notice Completes withdrawal on EigenLayer
      * @dev Only the operator delegator admin can call this
      * @param withdrawal The withdrawal params
-     * @param middlewareTimesIndex
+     * @param middlewareTimesIndex The middleware times index
      */
     function completeWithdrawal(
-        IStrategyManager.QueuedWithdrawal calldata withdrawal,
+        IDelegationManager.Withdrawal calldata withdrawal,
         uint256 middlewareTimesIndex
     ) external nonReentrant onlyOperatorDelegatorAdmin {
+        IERC20[] memory tokens = new IERC20[](1);
+        tokens[0] = IERC20(i_stETH);
+
         delegationManager.completeQueuedWithdrawal(
             withdrawal,
-            [IERC20(i_stETH)],
+            tokens,
             middlewareTimesIndex,
             true // Always get tokens and not share transfers
         );

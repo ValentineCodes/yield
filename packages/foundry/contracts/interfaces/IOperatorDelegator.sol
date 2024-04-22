@@ -2,6 +2,7 @@
 pragma solidity 0.8.19;
 
 import {IStrategy} from "./IStrategy.sol";
+import {IDelegationManager} from "./IDelegationManager.sol";
 
 interface IOperatorDelegator {
     event WithdrawQueued(
@@ -16,7 +17,7 @@ interface IOperatorDelegator {
     );
 
     /// @dev Gets the underlying token amount from the amount of shares
-    function getTokenBalanceFromStrategy() public view returns (uint256);
+    function getTokenBalanceFromStrategy() external view returns (uint256);
 
     /// @dev Deposit tokens into the EigenLayer.  This call assumes any balance of tokens in this contract will be delegated
     /// so do not directly send tokens here or they will be delegated and attributed to the next caller.
@@ -26,12 +27,12 @@ interface IOperatorDelegator {
     /**
      * @notice Undelegates the operator of this contract
      * @dev Only the operator delegator admin can call this
-     * @return Returns the withdrawal root
+     * @return withdrawalRoot Returns the withdrawal root
      */
     function undelegate() external returns (bytes32[] memory withdrawalRoot);
 
     /// @dev Gets the index of the strategy in EigenLayer in the staker's strategy list
-    function getStrategyIndex() public view returns (uint256);
+    function getStrategyIndex() external view returns (uint256);
 
     /**
      * @notice Queues withdrawal on EigenLayer
@@ -44,10 +45,10 @@ interface IOperatorDelegator {
      * @notice Completes withdrawal on EigenLayer
      * @dev Only the operator delegator admin can call this
      * @param withdrawal The withdrawal params
-     * @param middlewareTimesIndex
+     * @param middlewareTimesIndex The middleware times index
      */
     function completeWithdrawal(
-        IStrategyManager.QueuedWithdrawal calldata withdrawal,
+        IDelegationManager.Withdrawal calldata withdrawal,
         uint256 middlewareTimesIndex
     ) external;
 

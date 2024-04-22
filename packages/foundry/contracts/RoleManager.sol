@@ -2,8 +2,7 @@
 pragma solidity 0.8.19;
 
 import "@openzeppelin/contracts/access/AccessControl.sol";
-import "../interfaces/IRoleManager.sol";
-import "./RoleManagerStorage.sol";
+import "./interfaces/IRoleManager.sol";
 import "./Errors.sol";
 
 /// @title RoleManager

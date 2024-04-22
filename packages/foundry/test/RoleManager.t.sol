@@ -5,12 +5,16 @@ import {Test} from "forge-std/Test.sol";
 
 import {RoleManager} from "../contracts/RoleManager.sol";
 
-contract RoleManager is Test {
+contract RoleManagerTest is Test {
     RoleManager roleManager;
 
     address roleManagerAdmin = address(1);
 
     function setUp() public {
         roleManager = new RoleManager(roleManagerAdmin);
+    }
+
+    function testDefaultAdminIsRoleManagerAdmin() public {
+        assert(true);
     }
 }

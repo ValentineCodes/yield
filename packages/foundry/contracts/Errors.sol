@@ -89,7 +89,7 @@ error InvalidTokenReceived();
 error InvalidSender(address expectedSender, address actualSender);
 
 /// @dev Error when input amount is 0
-error InvalidZeroInput
+error InvalidZeroInput();
 
 /// @dev error when function returns 0 amount
 error InvalidZeroOutput();
