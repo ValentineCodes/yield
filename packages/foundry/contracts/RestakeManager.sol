@@ -35,10 +35,6 @@ contract RestakeManager is
     /// @dev address of the stETH token
     address private i_stETH;
 
-    constructor() {
-        _disableInitializers();
-    }
-
     /// @dev Initializes the contract with initial vars
     function initialize(
         address stETH,
@@ -68,9 +64,6 @@ contract RestakeManager is
             revert TransferFailed();
         }
 
-        // Transfer the collateral token to this address
-        IERC20(i_stETH).safeTransferFrom(_msgSender(), address(this), amount);
-
         // Approve the tokens to the operator delegator
         IERC20(i_stETH).safeApprove(address(i_operatorDelegator), amount);
 
@@ -87,7 +80,7 @@ contract RestakeManager is
      * @notice Withdraw stETH from the protocol
      * @param amount Amount of yETH tokens to burn
      */
-    function withdraw(uint256 amount) external {
+    function withdraw(uint256 amount) external nonReentrant {
         if (amount == 0) revert InvalidZeroInput();
 
         // Ensure staker has enough balance
@@ -123,7 +116,7 @@ contract RestakeManager is
     /// @return Amount of stETH tokens to withdraw
     function getWithdrawAmount(uint256 amount) public view returns (uint256) {
         uint256 yETHTotalSupply = i_yEth.totalSupply();
-        uint256 stETHTVL = address(i_operatorDelegator).balance;
+        uint256 stETHTVL = IERC20(i_stETH).balanceOf(address(i_operatorDelegator));
 
         if (stETHTVL == 0) revert NoWithdrawnFunds();
 

@@ -194,7 +194,7 @@ contract OperatorDelegator is IOperatorDelegator, ReentrancyGuard, Context {
             address(this),
             i_operator,
             address(this),
-            1,
+            0,
             block.number,
             strategiesToWithdraw,
             amountsToWithdraw
@@ -207,11 +207,9 @@ contract OperatorDelegator is IOperatorDelegator, ReentrancyGuard, Context {
      * @notice Completes withdrawal on EigenLayer
      * @dev Only the operator delegator admin can call this
      * @param withdrawal The withdrawal params
-     * @param middlewareTimesIndex The middleware times index
      */
     function completeWithdrawal(
-        IDelegationManager.Withdrawal calldata withdrawal,
-        uint256 middlewareTimesIndex
+        IDelegationManager.Withdrawal calldata withdrawal
     ) external nonReentrant onlyOperatorDelegatorAdmin {
         IERC20[] memory tokens = new IERC20[](1);
         tokens[0] = IERC20(i_stETH);
@@ -219,7 +217,7 @@ contract OperatorDelegator is IOperatorDelegator, ReentrancyGuard, Context {
         delegationManager.completeQueuedWithdrawal(
             withdrawal,
             tokens,
-            middlewareTimesIndex,
+            0,
             true // Always get tokens and not share transfers
         );
     }

@@ -30,11 +30,11 @@ contract RoleManager is IRoleManager, AccessControl {
     bytes32 public constant DEPOSIT_WITHDRAW_PAUSER =
         keccak256("DEPOSIT_WITHDRAW_PAUSER");
 
-    constructor(address roleManagerAdmin) {
+    constructor(address roleManagerAdmin, address minterburnerAdmin) {
         if (address(roleManagerAdmin) == address(0x0)) revert ZeroAddress();
 
         _grantRole(DEFAULT_ADMIN_ROLE, roleManagerAdmin);
-        _grantRole(Y_ETH_MINTER_BURNER, roleManagerAdmin);
+        _grantRole(Y_ETH_MINTER_BURNER, minterburnerAdmin);
         _grantRole(OPERATOR_DELEGATOR_ADMIN, roleManagerAdmin);
         _grantRole(RESTAKE_MANAGER_ADMIN, roleManagerAdmin);
         _grantRole(TOKEN_ADMIN, roleManagerAdmin);

@@ -10,8 +10,8 @@ interface IOperatorDelegator {
         address staker,
         address delegatedTo,
         address withdrawer,
-        uint nonce,
-        uint startBlock,
+        uint256 nonce,
+        uint256 startBlock,
         IStrategy[] strategies,
         uint256[] shares
     );
@@ -45,11 +45,9 @@ interface IOperatorDelegator {
      * @notice Completes withdrawal on EigenLayer
      * @dev Only the operator delegator admin can call this
      * @param withdrawal The withdrawal params
-     * @param middlewareTimesIndex The middleware times index
      */
     function completeWithdrawal(
-        IDelegationManager.Withdrawal calldata withdrawal,
-        uint256 middlewareTimesIndex
+        IDelegationManager.Withdrawal calldata withdrawal
     ) external;
 
     /// @dev Transfer stETH token to staker

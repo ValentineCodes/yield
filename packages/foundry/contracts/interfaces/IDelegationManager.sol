@@ -437,6 +437,13 @@ interface IDelegationManager is ISignatureUtils {
     function minWithdrawalDelayBlocks() external view returns (uint256);
 
     /**
+     * @notice Returns `true` if withdrawal is pending
+     * @param withdrawalRoot The has of the withdrawal params
+     * @return true or false
+     */
+    function pendingWithdrawals(bytes32 withdrawalRoot) external view returns (bool);
+
+    /**
      * @notice Minimum delay enforced by this contract per Strategy for completing queued withdrawals. Measured in blocks, and adjustable by this contract's owner,
      * up to a maximum of `MAX_WITHDRAWAL_DELAY_BLOCKS`. Minimum value is 0 (i.e. no delay enforced).
      */
