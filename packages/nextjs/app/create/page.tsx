@@ -7,7 +7,7 @@ import { Address, parseEther } from "viem";
 import { useChainId, useWalletClient } from "wagmi";
 import * as chains from "wagmi/chains";
 import { AddressInput, EtherInput, InputBase } from "~~/components/scaffold-eth";
-import { useDeployedContractInfo, useScaffoldContract, useScaffoldContractRead } from "~~/hooks/scaffold-eth";
+import { useDeployedContractInfo, useScaffoldContract, useScaffoldContractRead, useScaffoldContractWrite } from "~~/hooks/scaffold-eth";
 import { useTargetNetwork } from "~~/hooks/scaffold-eth/useTargetNetwork";
 import { notification } from "~~/utils/scaffold-eth";
 
@@ -61,6 +61,16 @@ const CreatePage: FC = () => {
   const { data: metaMultiSigWallet } = useScaffoldContract({
     contractName: "SafeMultiSigWallet",
   });
+
+  const { write: undelegate } = useScaffoldContractWrite({
+    contractName: "OperatorDelegator",
+    functionName: "undelegate"
+  })
+
+  const { write: queueWithdrawal } = useScaffoldContractWrite({
+    contractName: "OperatorDelegator",
+    functionName: "queueWithdrawal"
+  })
 
   const handleCreate = async () => {
     try {
@@ -205,6 +215,12 @@ const CreatePage: FC = () => {
 
             <button className="btn btn-secondary btn-sm" disabled={!walletClient} onClick={handleCreate}>
               Create
+            </button>
+            <button className="btn btn-secondary btn-sm" disabled={!walletClient} onClick={() => undelegate()}>
+              Undelegate
+            </button>
+            <button className="btn btn-secondary btn-sm" disabled={!walletClient} onClick={() => queueWithdrawal()}>
+              Queue Withdrawal
             </button>
           </div>
         </div>
