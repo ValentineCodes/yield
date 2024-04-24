@@ -139,7 +139,9 @@ contract OperatorDelegator is IOperatorDelegator, ReentrancyGuard, Context {
         onlyOperatorDelegatorAdmin
         returns (bytes32[] memory withdrawalRoot)
     {
-        return delegationManager.undelegate(address(this));
+         withdrawalRoot = delegationManager.undelegate(address(this));
+
+         delete s_operator;
     }
 
     /**

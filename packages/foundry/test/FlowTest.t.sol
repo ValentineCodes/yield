@@ -68,7 +68,11 @@ contract FlowTest is Test {
         // undelegate from EigenLayer
         operatorDelegator.undelegate();
 
+        // Ensure operator is undelegated
         assert(!delegationManager.isDelegated(address(operatorDelegator)));
+
+        // Ensure operator is deleted
+        assertEq(operatorDelegator.getOperator(), address(0));
     }
 
     function testDeposit() public {
