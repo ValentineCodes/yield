@@ -97,18 +97,6 @@ contract SafeMultiSigWallet {
     }
 
     /**
-        @notice Retrieves the transaction hash
-        @param _nonce Transaction nonce
-        @param to Address to send transaction to
-        @param value The amount to send with the transaction
-        @param data The transaction data
-        @return Transaction hash
-     */
-    function getTransactionHash(uint256 _nonce, address to, uint256 value, bytes memory data) public view returns (bytes32) {
-        return keccak256(abi.encodePacked(address(this), chainId, _nonce, to, value, data));
-    }
-
-    /**
         @notice Executes a transaction is signatures are valid
         @param to Address to send transaction to
         @param value The amount to send with the transaction
@@ -154,6 +142,18 @@ contract SafeMultiSigWallet {
 
         emit ExecuteTransaction(msg.sender, to, value, data, nonce-1, _hash, result);
         return result;
+    }
+
+    /**
+        @notice Retrieves the transaction hash
+        @param _nonce Transaction nonce
+        @param to Address to send transaction to
+        @param value The amount to send with the transaction
+        @param data The transaction data
+        @return Transaction hash
+     */
+    function getTransactionHash(uint256 _nonce, address to, uint256 value, bytes memory data) public view returns (bytes32) {
+        return keccak256(abi.encodePacked(address(this), chainId, _nonce, to, value, data));
     }
 
     /**
