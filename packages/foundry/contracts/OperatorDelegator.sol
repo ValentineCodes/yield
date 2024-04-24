@@ -93,7 +93,7 @@ contract OperatorDelegator is IOperatorDelegator, ReentrancyGuard, Context {
     /// @return shares The amount of new shares in the `strategy` created as part of the action.
     function deposit(
         uint256 amount
-    ) external nonReentrant onlyRestakeManager returns (uint256 shares) {
+    ) external onlyRestakeManager returns (uint256 shares) {
         if (address(strategy) == address(0x0)) revert ZeroAddress();
 
         // Move the tokens into this contract
