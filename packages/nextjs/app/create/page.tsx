@@ -37,6 +37,7 @@ const CreatePage: FC = () => {
   const poolServerUrl = getPoolServerUrl(targetNetwork.id);
 
   const [ethValue, setEthValue] = useState("");
+  const [operatorAddress, setOperatorAddress] = useState("")
   const { data: contractInfo } = useDeployedContractInfo("SafeMultiSigWallet");
 
   const [predefinedTxData, setPredefinedTxData] = useLocalStorage<PredefinedTxData>("predefined-tx-data", {
@@ -61,6 +62,17 @@ const CreatePage: FC = () => {
   const { data: metaMultiSigWallet } = useScaffoldContract({
     contractName: "SafeMultiSigWallet",
   });
+
+  const { data: operator, isLoading: isLoadingOperator } = useScaffoldContractRead({
+    contractName: "OperatorDelegator",
+    functionName: "getOperator"
+  })
+
+  const { write: delegate, isLoading: isLoadingDelegate } = useScaffoldContractWrite({
+    contractName: "OperatorDelegator",
+    functionName: "delegate",
+    args: [operatorAddress]
+  })
 
   const { write: undelegate } = useScaffoldContractWrite({
     contractName: "OperatorDelegator",
@@ -135,6 +147,10 @@ const CreatePage: FC = () => {
       console.log(e);
     }
   };
+
+  const handleWithdrawalCompletion = async () => {
+
+  }
 
   useEffect(() => {
     if (predefinedTxData && !predefinedTxData.callData && predefinedTxData.methodName !== "transferFunds") {
@@ -216,12 +232,125 @@ const CreatePage: FC = () => {
             <button className="btn btn-secondary btn-sm" disabled={!walletClient} onClick={handleCreate}>
               Create
             </button>
+
+            <hr />
+
+            <div>
+              <label className="label">
+                <span className="label-text">stETH Balance</span>
+              </label>
+              <InputBase
+                disabled
+                value={`# ${nonce}`}
+                placeholder={"loading..."}
+                onChange={() => {
+                  null;
+                }}
+              />
+            </div>
+
+            <div>
+              <label className="label">
+                <span className="label-text">Operator</span>
+              </label>
+              <AddressInput
+                disabled
+                value={`${operator}`}
+                placeholder={"loading..."}
+                onChange={() => {
+                  null;
+                }}
+              />
+            </div>
+
+            <div>
+              <label className="label">
+                <span className="label-text">Withdrawal in Queue. Blocks remaining</span>
+              </label>
+              <InputBase
+                disabled
+                value={`# ${nonce}`}
+                placeholder={"loading..."}
+                onChange={() => {
+                  null;
+                }}
+              />
+            </div>
+
+            <AddressInput
+              disabled={isLoadingDelegate}
+              placeholder="Operator address"
+              value={operatorAddress}
+              onChange={value => setOperatorAddress(value)}
+            />
+            <button className="btn btn-secondary btn-sm" disabled={!walletClient || isLoadingDelegate} onClick={() => delegate()}>
+              Delegate
+            </button>
             <button className="btn btn-secondary btn-sm" disabled={!walletClient} onClick={() => undelegate()}>
               Undelegate
             </button>
             <button className="btn btn-secondary btn-sm" disabled={!walletClient} onClick={() => queueWithdrawal()}>
               Queue Withdrawal
             </button>
+            <button className="btn btn-secondary btn-sm" disabled={!walletClient} onClick={handleWithdrawalCompletion}>
+              Complete Withdrawal
+            </button>
+
+            <hr />
+
+            <div>
+              <label className="label">
+                <span className="label-text">stETH Balance</span>
+              </label>
+              <InputBase
+                disabled
+                value={`# ${nonce}`}
+                placeholder={"loading..."}
+                onChange={() => {
+                  null;
+                }}
+              />
+            </div>
+
+            <div>
+              <label className="label">
+                <span className="label-text">yETH Balance</span>
+              </label>
+              <InputBase
+                disabled
+                value={`# ${nonce}`}
+                placeholder={"loading..."}
+                onChange={() => {
+                  null;
+                }}
+              />
+            </div>
+
+            <div>
+              <InputBase
+                value={''}
+                placeholder="Deposit amount"
+                onChange={() => {
+                  null
+                }}
+              />
+              <button className="btn btn-secondary btn-sm mt-2" disabled={!walletClient} onClick={() => null}>
+                Deposit
+              </button>
+            </div>
+
+            <div>
+              <InputBase
+                value={''}
+                placeholder="Withdrawal amount"
+                onChange={() => {
+                  null
+                }}
+              />
+              <button className="btn btn-secondary btn-sm mt-2" disabled={!walletClient} onClick={() => null}>
+                Withdraw
+              </button>
+            </div>
           </div>
         </div>
       </div>

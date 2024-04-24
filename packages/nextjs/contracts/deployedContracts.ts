@@ -1313,11 +1313,6 @@ const contracts = {
               internalType: "contract IStrategy",
             },
             {
-              name: "operator",
-              type: "address",
-              internalType: "address",
-            },
-            {
               name: "stETH",
               type: "address",
               internalType: "address",
@@ -1377,6 +1372,19 @@ const contracts = {
         },
         {
           type: "function",
+          name: "delegate",
+          inputs: [
+            {
+              name: "operator",
+              type: "address",
+              internalType: "address",
+            },
+          ],
+          outputs: [],
+          stateMutability: "nonpayable",
+        },
+        {
+          type: "function",
           name: "deposit",
           inputs: [
             {
@@ -1393,6 +1401,19 @@ const contracts = {
             },
           ],
           stateMutability: "nonpayable",
+        },
+        {
+          type: "function",
+          name: "getOperator",
+          inputs: [],
+          outputs: [
+            {
+              name: "",
+              type: "address",
+              internalType: "address",
+            },
+          ],
+          stateMutability: "view",
         },
         {
           type: "function",
@@ -1518,6 +1539,61 @@ const contracts = {
             },
           ],
           anonymous: false,
+        },
+        {
+          type: "event",
+          name: "WithdrawalComplete",
+          inputs: [
+            {
+              name: "withdraw",
+              type: "tuple",
+              indexed: false,
+              internalType: "struct IDelegationManager.Withdrawal",
+              components: [
+                {
+                  name: "staker",
+                  type: "address",
+                  internalType: "address",
+                },
+                {
+                  name: "delegatedTo",
+                  type: "address",
+                  internalType: "address",
+                },
+                {
+                  name: "withdrawer",
+                  type: "address",
+                  internalType: "address",
+                },
+                {
+                  name: "nonce",
+                  type: "uint256",
+                  internalType: "uint256",
+                },
+                {
+                  name: "startBlock",
+                  type: "uint32",
+                  internalType: "uint32",
+                },
+                {
+                  name: "strategies",
+                  type: "address[]",
+                  internalType: "contract IStrategy[]",
+                },
+                {
+                  name: "shares",
+                  type: "uint256[]",
+                  internalType: "uint256[]",
+                },
+              ],
+            },
+          ],
+          anonymous: false,
+        },
+        {
+          type: "error",
+          name: "AlreadyDelegated",
+          inputs: [],
         },
         {
           type: "error",
