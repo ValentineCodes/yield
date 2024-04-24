@@ -119,6 +119,9 @@ contract OperatorDelegator is IOperatorDelegator, ReentrancyGuard, Context {
     function delegate(address operator) external onlyOperatorDelegatorAdmin {
         if (operator == address(0x0)) revert ZeroAddress();
 
+        address _operator = s_operator;
+        if(_operator != address(0x0) || _operator == operator) revert AlreadyDelegated();
+
         // Delegate this contract to an operator
         delegationManager.delegateTo(
             operator,

@@ -10,6 +10,9 @@ error InsufficientFunds();
 /// @dev Error for 0x0 address inputs
 error ZeroAddress();
 
+/// @dev Error for already delegated operator
+error AlreadyDelegated();
+
 /// @dev Error for already added items to a list
 error AlreadyAdded();
 
