@@ -17,7 +17,6 @@ contract DeployScript is ScaffoldETHDeploy {
     address STRATEGY_MANAGER = 0xdfB5f6CE42aAA7830E94ECFCcAd411beF4d4D5b6;
     address DELEGATION_MANAGER = 0xA44151489861Fe9e3055d95adC98FbD462B948e7;
     address STETH_STRATEGY = 0x7D704507b76571a51d9caE8AdDAbBFd0ba0e63d3;
-    address OPERATOR = 0xf882cc8107996f15C272080E54fc1Eb036772530;
     address STETH = 0x3F1c547b21f65e10480dE3ad8E19fAAC46C95034;
 
     function run() external {
@@ -54,7 +53,6 @@ contract DeployScript is ScaffoldETHDeploy {
             restakeManager,
             delegationManager,
             IStrategy(STETH_STRATEGY),
-            OPERATOR,
             STETH
         );
 

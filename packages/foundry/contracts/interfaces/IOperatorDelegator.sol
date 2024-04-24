@@ -25,11 +25,24 @@ interface IOperatorDelegator {
     function deposit(uint256 amount) external returns (uint256 shares);
 
     /**
+        @notice Delegates to an operator
+        @dev Only the operator delegator admin can call this
+        @param operator Address of operator
+     */
+    function delegate(address operator) external;
+
+    /**
      * @notice Undelegates the operator of this contract
      * @dev Only the operator delegator admin can call this
      * @return withdrawalRoot Returns the withdrawal root
      */
     function undelegate() external returns (bytes32[] memory withdrawalRoot);
+
+    /**
+        @notice Gets the current operator
+        @return The address of the operator
+     */
+    function getOperator() external view returns (address);
 
     /// @dev Gets the index of the strategy in EigenLayer in the staker's strategy list
     function getStrategyIndex() external view returns (uint256);

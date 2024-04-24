@@ -45,9 +45,11 @@ contract FlowTest is Test {
             restakeManager,
             delegationManager,
             IStrategy(STETH_STRATEGY),
-            OPERATOR,
             STETH
         );
+
+        vm.prank(roleManagerAdmin);
+        operatorDelegator.delegate(OPERATOR);
 
         // Initialize contract
         restakeManager.initialize(

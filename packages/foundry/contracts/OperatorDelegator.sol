@@ -27,7 +27,6 @@ import "./Errors.sol";
 
 /**
  * @dev This contract will be responsible for interacting with Eigenlayer
- * This contract will be delegated to an operator on deployment
  * This contract handled all stETH tokens, all of which will be delegated to an operator
  * Only the RestakeManager should be interacting with this contract for EL interactions.
  */
@@ -53,7 +52,7 @@ contract OperatorDelegator is IOperatorDelegator, ReentrancyGuard, Context {
     address immutable i_stETH;
 
     /// @dev address of the operator that manages deposits on EigenLayer
-    address immutable i_operator;
+    address private s_operator;
 
     /// @dev Allows only a whitelisted address to configure the contract
     modifier onlyOperatorDelegatorAdmin() {
@@ -74,35 +73,19 @@ contract OperatorDelegator is IOperatorDelegator, ReentrancyGuard, Context {
         IRestakeManager _restakeManager,
         IDelegationManager _delegationManager,
         IStrategy _strategy,
-        address operator,
         address stETH
     ) {
         if (address(_roleManager) == address(0x0)) revert ZeroAddress();
         if (address(_strategyManager) == address(0x0)) revert ZeroAddress();
         if (address(_restakeManager) == address(0x0)) revert ZeroAddress();
         if (address(_delegationManager) == address(0x0)) revert ZeroAddress();
-        if (operator == address(0x0)) revert ZeroAddress();
 
         roleManager = _roleManager;
         strategyManager = _strategyManager;
         restakeManager = _restakeManager;
         delegationManager = _delegationManager;
         strategy = _strategy;
-
-        // Delegate this contract to an operator
-        _delegationManager.delegateTo(
-            operator,
-            ISignatureUtils.SignatureWithExpiry(bytes(""), 0),
-            bytes32("")
-        );
-
-        i_operator = operator;
         i_stETH = stETH;
-    }
-
-    /// @dev Gets the underlying token amount from the amount of shares
-    function getTokenBalanceFromStrategy() public view returns (uint256) {
-        return strategy.userUnderlyingView(address(this));
     }
 
     /// @dev Deposit tokens into the EigenLayer.  This call assumes any balance of tokens in this contract will be delegated
@@ -129,6 +112,24 @@ contract OperatorDelegator is IOperatorDelegator, ReentrancyGuard, Context {
     }
 
     /**
+        @notice Delegates to an operator
+        @dev Only the operator delegator admin can call this
+        @param operator Address of operator
+     */
+    function delegate(address operator) external onlyOperatorDelegatorAdmin {
+        if (operator == address(0x0)) revert ZeroAddress();
+
+        // Delegate this contract to an operator
+        delegationManager.delegateTo(
+            operator,
+            ISignatureUtils.SignatureWithExpiry(bytes(""), 0),
+            bytes32("")
+        );
+
+        s_operator = operator;
+    }
+
+    /**
      * @notice Undelegates the operator of this contract
      * @dev Only the operator delegator admin can call this
      * @return withdrawalRoot Returns the withdrawal root
@@ -139,25 +140,6 @@ contract OperatorDelegator is IOperatorDelegator, ReentrancyGuard, Context {
         returns (bytes32[] memory withdrawalRoot)
     {
         return delegationManager.undelegate(address(this));
-    }
-
-    /// @dev Gets the index of the strategy in EigenLayer in the staker's strategy list
-    function getStrategyIndex() public view returns (uint256) {
-        // Get the length of the strategy list for this contract
-        uint256 strategyLength = strategyManager.stakerStrategyListLength(
-            address(this)
-        );
-
-        for (uint256 i = 0; i < strategyLength; i++) {
-            if (
-                strategyManager.stakerStrategyList(address(this))[i] == strategy
-            ) {
-                return i;
-            }
-        }
-
-        // Not found
-        revert NotFound();
     }
 
     /**
@@ -194,7 +176,7 @@ contract OperatorDelegator is IOperatorDelegator, ReentrancyGuard, Context {
         emit WithdrawQueued(
             withdrawalRoots[0],
             address(this),
-            i_operator,
+            s_operator,
             address(this),
             nonce,
             block.number,
@@ -230,5 +212,34 @@ contract OperatorDelegator is IOperatorDelegator, ReentrancyGuard, Context {
         uint256 amount
     ) external onlyRestakeManager {
         IERC20(i_stETH).safeTransfer(staker, amount);
+    }
+
+    /// @dev Gets operator
+    function getOperator() external view returns (address) {
+        return s_operator;
+    }
+
+    /// @dev Gets the index of the strategy in EigenLayer in the staker's strategy list
+    function getStrategyIndex() public view returns (uint256) {
+        // Get the length of the strategy list for this contract
+        uint256 strategyLength = strategyManager.stakerStrategyListLength(
+            address(this)
+        );
+
+        for (uint256 i = 0; i < strategyLength; i++) {
+            if (
+                strategyManager.stakerStrategyList(address(this))[i] == strategy
+            ) {
+                return i;
+            }
+        }
+
+        // Not found
+        revert NotFound();
+    }
+
+    /// @dev Gets the underlying token amount from the amount of shares
+    function getTokenBalanceFromStrategy() public view returns (uint256) {
+        return strategy.userUnderlyingView(address(this));
     }
 }
