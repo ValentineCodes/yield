@@ -18,7 +18,7 @@
     "deploy": "yarn workspace @se-2/foundry deploy",
     "deploy:verify": "yarn workspace @se-2/foundry deploy:verify",
     "foundry:lint": "yarn workspace @se-2/foundry lint",
-    "foundry:test": "yarn workspace @se-2/foundry test",
+    "test": "yarn workspace @se-2/foundry test",
     "generate": "yarn workspace @se-2/foundry generate",
     "start": "yarn workspace @se-2/nextjs dev",
     "next:lint": "yarn workspace @se-2/nextjs lint",

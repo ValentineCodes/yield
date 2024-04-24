@@ -11,7 +11,7 @@
     "deploy:verify": "forge build --build-info --build-info-path out/build-info/ && forge script script/Deploy.s.sol --rpc-url ${1:-default_network} --broadcast --legacy --verify ; node script/generateTsAbis.js",
     "verify": "forge build --build-info --build-info-path out/build-info/ && forge script script/VerifyAll.s.sol --ffi --rpc-url ${1:-default_network}",
     "lint": "forge fmt",
-    "test": "forge test"
+    "test": "forge test --fork-url https://ethereum-holesky.publicnode.com --etherscan-api-key H5AUPMUYQQF5BC5GS2JRDRESR89ZK1FJ83"
   },
   "devDependencies": {
     "@types/prettier": "^2",

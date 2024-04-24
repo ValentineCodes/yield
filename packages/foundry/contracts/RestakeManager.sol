@@ -58,11 +58,7 @@ contract RestakeManager is
         uint256 yETHAmountToMint = getMintAmount(amount);
 
         // transfer stETH to this contract
-        if (
-            !IERC20(i_stETH).transferFrom(_msgSender(), address(this), amount)
-        ) {
-            revert TransferFailed();
-        }
+        IERC20(i_stETH).safeTransferFrom(_msgSender(), address(this), amount);
 
         // Approve the tokens to the operator delegator
         IERC20(i_stETH).safeApprove(address(i_operatorDelegator), amount);
