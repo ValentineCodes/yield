@@ -209,6 +209,8 @@ contract OperatorDelegator is IOperatorDelegator, ReentrancyGuard, Context {
             0,
             true // Always get tokens and not share transfers
         );
+
+        emit WithdrawalComplete(withdrawal);
     }
 
     /// @dev Transfer stETH token to staker

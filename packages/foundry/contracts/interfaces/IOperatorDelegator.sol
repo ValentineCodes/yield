@@ -16,6 +16,10 @@ interface IOperatorDelegator {
         uint256[] shares
     );
 
+    event WithdrawalComplete(
+        IDelegationManager.Withdrawal withdraw
+    );
+
     /// @dev Gets the underlying token amount from the amount of shares
     function getTokenBalanceFromStrategy() external view returns (uint256);
 
