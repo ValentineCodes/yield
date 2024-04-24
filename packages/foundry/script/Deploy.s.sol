@@ -31,7 +31,7 @@ contract DeployScript is ScaffoldETHDeploy {
 
         // deploy SafeMultiSigWallet
         address[] memory signers = new address[](1);
-        signers[0] = 0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC;
+        signers[0] = 0xa0Ee7A142d267C1f36714E4a8F75612F20a79720;
 
         SafeMultiSigWallet safeMultiSigWallet = new SafeMultiSigWallet(31337, signers, 1);
 

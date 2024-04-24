@@ -3,7 +3,7 @@
   "version": "0.0.1",
   "scripts": {
     "account": "node script/ListAccount.js",
-    "chain": "anvil --config-out localhost.json --fork-url https://ethereum-holesky.publicnode.com --chain-id 31337",
+    "chain": "anvil --config-out localhost.json --fork-url https://ethereum-holesky.publicnode.com --timeout 60000 --chain-id 31337 --block-base-fee-per-gas 0 --auto-impersonate",
     "fork": "anvil --fork-url ${0:-mainnet} --chain-id 31337 --config-out localhost.json",
     "compile": "forge compile",
     "generate": "node script/generateAccount.js",

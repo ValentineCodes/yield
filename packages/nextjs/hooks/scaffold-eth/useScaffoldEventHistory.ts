@@ -76,7 +76,7 @@ export const useScaffoldEventHistory = <
           address: deployedContractData?.address,
           event,
           args: filters as any, // TODO: check if it works and fix type
-          fromBlock: fromBlock || fromBlockUpdated,
+          fromBlock: blockNumber - BigInt(50000),
           toBlock: blockNumber,
         });
         setFromBlockUpdated(blockNumber + 1n);
