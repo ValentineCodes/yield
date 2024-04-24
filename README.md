@@ -1,372 +1,252 @@
-# 🏗 Scaffold-ETH 2 - Foundry
+# 🚩 Challenge 6: 👛 Multisig Wallet
 
-🧪 An open-source, up-to-date toolkit for building decentralized applications (dapps) on the Ethereum blockchain. It's designed to make it easier for developers to create and deploy smart contracts and build user interfaces that interact with those contracts.
+![readme-6](https://github.com/scaffold-eth/se-2-challenges/assets/55535804/577a8abd-a098-499f-9903-fb6e4c9337e9)
 
-⚙️ Built using NextJS, RainbowKit, Hardhat, Wagmi, and Typescript.
+👩‍👩‍👧‍👧 A multisig wallet is a smart contract that acts like a wallet, allowing us to secure assets by requiring multiple accounts to "vote" on transactions. Think of it as a treasure chest that can only be opened when all key parties agree.
 
-- ✅ **Contract Hot Reload**: Your frontend auto-adapts to your smart contract as you edit it.
-- 🔥 **Burner Wallet & Local Faucet**: Quickly test your application with a burner wallet and local faucet.
-- 🔐 **Integration with Wallet Providers**: Connect to different wallet providers and interact with the Ethereum network.
+📜 The contract keeps track of all transactions. Each transaction can be confirmed or rejected by the signers (smart contract owners). Only transactions that receive enough confirmations can be "executed" by the signers.
 
-## Contents
+🌟 The final deliverable is a multisig wallet where you can propose adding and removing signers, transferring funds to other accounts, and updating the required number of signers to execute a transaction. After any of the signers propose a transaction, it's up to the signers to confirm and execute it. Deploy your contracts to a testnet, then build and upload your app to a public web server.
 
-- [Requirements](#requirements)
-- [Quickstart](#quickstart)
-- [Deploying your Smart Contracts to a Live Network](#deploying-your-smart-contracts-to-a-live-network)
-- [Deploying your NextJS App](#deploying-your-nextjs-app)
-  - [Scaffold App Configuration](#scaffold-app-configuration)
-- [Interacting with your Smart Contracts: SE-2 Custom Hooks](#interacting-with-your-smart-contracts-se-2-custom-hooks)
-- [Disabling Type & Linting Error Checks](#disabling-type-and-linting-error-checks)
-  - [Disabling commit checks](#disabling-commit-checks)
-  - [Deploying to Vercel without any checks](#deploying-to-vercel-without-any-checks)
-  - [Disabling Github Workflow](#disabling-github-workflow)
-- [Contributing to Scaffold-ETH 2](#contributing-to-scaffold-eth-2)
+💬 Meet other builders working on this challenge and get help in the [Multisig Build Cohort telegram](https://t.me/+zKllN8OlGuxmYzFh).
 
-## Requirements
+---
+
+## 📜 Quest Journal 🧭
+
+In this challenge you'll have access to a fully functional Multisig Wallet for inspiration, unlike previous challenges where certain code sections were intentionally left incomplete.
+
+The objective is to allow builders to create their unique versions while referring to this existing build when encountering difficulties.
+
+### 🥅 Goals:
+
+- [ ] Can you edit and deploy the contract with a 2/3 multisig with two of your addresses and the buidlguidl multisig as the third signer? (buidlguidl.eth is like your backup recovery.)
+- [ ] Can you propose basic transactions with the frontend that sends them to the backend?
+- [ ] Can you “vote” on the transaction as other signers?
+- [ ] Can you execute the transaction and does it do the right thing?
+- [ ] Can you add and remove signers with a custom dialog (that just sends you to the create transaction dialog with the correct calldata)
+
+### ⚔️ Side Quests:
+
+- [ ] **Multisig as a service**<br>
+      Create a deploy button with a copy-paste dialog for sharing so anyone can make a multisig at your URL with your frontend.
+
+- [ ] **Create custom signer roles for your Wallet**<br>
+      You may not want every signer to create new transfers, only allow them to sign existing transactions or a mega-admin role who will be able to veto any transaction.
+
+- [ ] **Integrate this MultiSig wallet into other Scaffold ETH-2 builds**<br>
+      Find a Scaffold ETH-2 build that could make use of a Multisig wallet and try to integrate it!
+
+---
+
+## 👇🏼 Quick Break-Down 👛
+
+This is a smart contract that acts as an offchain signature-based shared wallet amongst different signers that showcases use of meta-transaction knowledge and ECDSA `recover()`.
+
+> If you are unfamiliar with these concepts, check out all the [ETH.BUILD videos](https://www.youtube.com/watch?v=CbbcISQvy1E&ab_channel=AustinGriffith) by Austin Griffith, especially the Meta Transactions one!
+
+❗ [OpenZepplin's ECDSA Library](https://docs.openzeppelin.com/contracts/2.x/api/cryptography#ECDSA) provides an easy way to verify signed messages, in this challenge we'll be using it to verify the signatures of the signers of the multisig wallet.
+
+At a high-level, the contract core functions are carried out as follows:
+
+**Offchain: ⛓🙅🏻‍♂️** - Generation of a packed hash (bytes32) for a function call with specific parameters through a public view function . - It is signed by one of the signers associated to the multisig, and added to an array of signatures (`bytes[] memory signatures`)
+
+**Onchain: ⛓🙆🏻‍♂️**
+
+- `bytes[] memory signatures` is then passed into `executeTransaction` as well as the necessary info to use `recover()` to obtain the public address that ought to line up with one of the signers of the wallet.
+  - This method, plus some conditional logic to avoid any duplicate entries from a single signer, is how votes for a specific transaction (hashed tx) are assessed.
+- If it's a success, the tx is passed to the `call(){}` function of the deployed SafeMultiSigWallet contract (this contract), thereby passing the `onlySelf` modifier for any possible calls to internal txs such as (`addSigner()`,`removeSigner()`,`transferFunds()`,`updateSignaturesRequired()`).
+
+**Cool Stuff that is Showcased: 😎**
+
+- Showcases how the `call(){}` function is an external call that ought to increase the nonce of an external contract, as [they increment differently](https://ethereum.stackexchange.com/questions/764/do-contracts-also-have-a-nonce) from user accounts.
+- Normal internal functions, such as changing the signers, and adding or removing signers, are treated as external function calls when `call()` is used with the respective transaction hash.
+- Showcases use of an array (see constructor) populating a mapping to store pertinent information within the deployed smart contract storage location within the EVM in a more efficient manner.
+
+---
+
+## Checkpoint 0: 📦 Environment 📚
 
 Before you begin, you need to install the following tools:
 
 - [Node (v18 LTS)](https://nodejs.org/en/download/)
 - Yarn ([v1](https://classic.yarnpkg.com/en/docs/install/) or [v2+](https://yarnpkg.com/getting-started/install))
 - [Git](https://git-scm.com/downloads)
-- [Foundryup](https://book.getfoundry.sh/getting-started/installation)
 
-## Quickstart
+Then download the challenge to your computer and install dependencies by running:
 
-To get started with Scaffold-ETH 2, follow the steps below:
-
-1. Clone this repo & install dependencies
-
-```
-git clone -b foundry https://github.com/scaffold-eth/scaffold-eth-2.git --recurse-submodules
-cd scaffold-eth-2
+```sh
+git clone https://github.com/scaffold-eth/se-2-challenges.git challenge-6-multisig
+cd challenge-6-multisig
+git checkout challenge-6-multisig
 yarn install
-foundryup
 ```
 
-2. Create your `.env` file inside `packages/foundry`:
+> in the same terminal, start your local network (a blockchain emulator in your computer):
 
-```
-(echo "DEPLOYER_PRIVATE_KEY=";  echo "ALCHEMY_API_KEY=oKxs-03sij-U_N0iOlrSsZFr29-IqbuF"; echo "ETHERSCAN_API_KEY=DNXJA8RX2Q3VZ4URQIWP7Z68CJXQZSC6AW") >> packages/foundry/.env
-```
-
-3. Run a local network in the first terminal:
-
-```
+```sh
 yarn chain
 ```
 
-This command starts a local Ethereum network using Anvil in Foundry. The network runs on your local machine and can be used for testing and development. You can customize the network configuration in `foundry.toml`
+> in a second terminal window, 🛰 deploy your contract (locally):
 
-4. On a second terminal, deploy the test contract:
-
-```
+```sh
+cd challenge-6-multisig
 yarn deploy
 ```
 
-This command deploys a test smart contract to the local network. The contract is located in `packages/foundry/src` and can be modified to suit your needs. The `yarn deploy` command uses the deploy script located in `packages/foundry/script/Deploy.s.sol` to deploy the contract to the network. You can also customize the deploy script.
+> in a third terminal window, start your 📱 frontend:
 
-5. On a third terminal, start your NextJS app:
-
-```
+```sh
+cd challenge-6-multisig
 yarn start
 ```
 
-Visit your app on: `http://localhost:3000`. You can interact with your smart contract using the contract component or the example ui in the frontend. You can tweak the app config in `packages/nextjs/scaffold.config.ts`.
+📱 Open http://localhost:3000 to see the app.
 
-Run smart contract test with `yarn foundry:test`
+> In a fourth terminal window:
 
-- Edit your smart contract `YourContract.sol` in `packages/foundry/src`
-- Edit your frontend in `packages/nextjs/pages`
-- Edit your deployment scripts in `packages/foundry/script/Deploy.s.sol`
+❗ This command is only required in your local environment (Hardhat chain).
 
-## Deploying your Smart Contracts to a Live Network
-
-Once you are ready to deploy your smart contracts, there are a few things you need to adjust.
-
-1. Select the network
-
-By default, `yarn deploy` will deploy the contract to the local network. You can change the defaultNetwork in `packages/foundry/foundry.toml`.You could also simply run `yarn deploy --network target_network` to deploy to another network
-
-Check the `foundry.toml` for the networks that are pre-configured. You can also add other network settings to the `foundry.toml`. Here are the [Alchemy docs](https://docs.alchemy.com/docs/how-to-add-alchemy-rpc-endpoints-to-metamask) for information on specific networks.
-
-Example: To deploy the contract to the Sepolia network, run the command below:
+```bash
+yarn backend-local
 
 ```
-yarn deploy --network sepolia
-```
 
-2. Generate a new account or add one to deploy the contract(s) from. Additionally you will need to add your Alchemy API key. Rename `.env.example` to `.env` and fill the required keys.
+When deployed to any other chain, it will automatically use our deployed backend ([repo](https://github.com/scaffold-eth/se-2-challenges/tree/multisig-backend)) from `https://backend.multisig.holdings:49832/`.
 
-```
-ALCHEMY_API_KEY="",
-DEPLOYER_PRIVATE_KEY=""
-```
+> 👩‍💻 Rerun `yarn deploy --reset` whenever you want to deploy new contracts to the frontend, update your current contracts with changes, or re-deploy it to get a fresh contract address.
 
-The deployer account is the account that will deploy your contracts. Additionally, the deployer account will be used to execute any function calls that are part of your deployment script.
+🔏 Now you are ready to edit your smart contract `SafeMultiSigWallet.sol` in `packages/hardhat/contracts`
 
-You can generate a random account / private key with `yarn generate` or add the private key of your crypto wallet. `yarn generate` will create a random account and add the `DEPLOYER_PRIVATE_KEY` to the `.env` file. You can check the generated account with `yarn account`.
+---
 
-3. Deploy your smart contract(s)
+## Checkpoint 1: 📝 Configure Owners 🖋
 
-Run the command below to deploy the smart contract to the target network. Make sure to have some funds in your deployer account to pay for the transaction.
+🔏 The first step for this multisig wallet is to configure the owners, who will be able to propose, sign and execute transactions.
 
-```
-yarn deploy --network network_name
-```
+🏗️ This is done in the constructor of the contract, where you can pass in an array of addresses that will be the signers of the wallet, and a number of signatures required to execute a transaction.
 
-4. Deploy and verify your smart contract(s)
+> 🛠️ Modify the contract constructor arguments at the deploy script `00_deploy_meta_multisig_wallet.ts` in `packages/hardhat/deploy`. Just set the first signer using your frontend address.
 
-You can deploy & verify your smart contract on Etherscan by running:
+> 🔄 Will need to run `yarn deploy --reset` to deploy a fresh contract with the first signer configured.
 
-```
-yarn deploy:verify --network network_name
-```
+You can set the rest of the signers in the frontend, using the "Owners" tab:
 
-## Deploying your NextJS App
+![multisig-1](https://github.com/scaffold-eth/se-2-challenges/assets/55535804/bc65bf00-93de-4f24-b42b-c78596cd54e0)
 
-**Hint**: We recommend connecting your GitHub repo to Vercel (through the Vercel UI) so it gets automatically deployed when pushing to `main`.
+In this tab you can start your transaction proposal to either add or remove owners.
 
-If you want to deploy directly from the CLI, run `yarn vercel` and follow the steps to deploy to Vercel. Once you log in (email, github, etc), the default options should work. It'll give you a public URL.
+> 📝 Fill the form and click on "Create Tx".
 
-If you want to redeploy to the same production URL you can run `yarn vercel --prod`. If you omit the `--prod` flag it will deploy it to a preview/test URL.
+![multisig-2](https://github.com/scaffold-eth/se-2-challenges/assets/55535804/a74bb0c9-62de-4a12-932a-a5498bf12ecb)
 
-**Make sure to check the values of your Scaffold Configuration before deploying your NextJS App.**
+This will take you to a populated transaction at "Create" page:
 
-### Scaffold App Configuration
+![multisig-3](https://github.com/scaffold-eth/se-2-challenges/assets/55535804/5d4adfb8-66a6-49bb-b72c-3b4062f8e804)
 
-You can configure different settings for your dapp at `packages/nextjs/scaffold.config.ts`.
+> Create & sign the new transaction, clicking in the "Create" button:
 
-```ts
-export type ScaffoldConfig = {
-  targetNetwork: chains.Chain;
-  pollingInterval: number;
-  alchemyApiKey: string;
-  walletConnectProjectId: string;
-  onlyLocalBurnerWallet: boolean;
-  walletAutoConnect: boolean;
-  // your dapp custom config, eg:
-  // tokenIcon : string;
-};
-```
+![multisig-4](https://github.com/scaffold-eth/se-2-challenges/assets/55535804/f8ef3f85-c543-468f-a008-6c4c8b9cf20a)
 
-The configuration parameters are described below, make sure to update the values according to your needs:
+You will see the new transaction in the pool (this is all offchain).
 
-- **targetNetwork**  
-  Sets the blockchain network where your dapp is deployed. Use values from `wagmi/chains`.
+You won't be able to sign it because on creation it already has one signature (from the frontend account).
 
-- **pollingInterval**  
-  The interval in milliseconds at which your front-end application polls the RPC servers for fresh data. _Note that this setting does not affect the local network._
+> Click on the ellipsses button [...] to read the details of the transaction.
 
-- **alchemyApiKey**  
-  Default Alchemy API key from Scaffold ETH 2 for local testing purposes.  
-  It's recommended to obtain your own API key from the [Alchemy Dashboard](https://dashboard.alchemyapi.io/) and store it in an environment variable: `NEXT_PUBLIC_ALCHEMY_API_KEY` at `\packages\nextjs\.env.local` file.
+![multisig-5](https://github.com/scaffold-eth/se-2-challenges/assets/55535804/25974706-a127-45f4-8a17-6f99b9e97104)
 
-- **walletConnectProjectId**  
-  WalletConnect's default project ID from Scaffold ETH 2 for local testing purposes.
-  It's recommended to obtain your own project ID from the [WalletConnect website](https://cloud.walletconnect.com) and store it in an environment variable: `NEXT_PUBLIC_WALLET_CONNECT_PROJECT_ID` at `\packages\nextjs\.env.local` file.
+> ⛽️ Give your account some gas at the faucet and execute the transaction.
 
-- **onlyLocalBurnerWallet**  
-  Controls the networks where the Burner Wallet feature is available. This feature provides a lightweight wallet for users.
+☑ Click on "Exec" to execute it, will be marked as "Completed" on the "Pool" tab, and will appear in the "Multisig" tab with the rest of executed transactions.
 
-  - `true` => Use Burner Wallet only on hardhat network.
-  - `false` => Use Burner Wallet on all networks.
+![multisig-6a](https://github.com/scaffold-eth/se-2-challenges/assets/55535804/edf9218c-5b10-49b7-a564-e415c0d2f042)
 
-- **walletAutoConnect**  
-  Set it to `true` to activate automatic wallet connection behavior:
-  - If the user was connected into a wallet before, on page reload it reconnects automatically.
-  - If user is not connected to any wallet, on reload, it connects to the burner wallet if it is enabled for the current network. See `onlyLocalBurnerWallet`
+![multisig-6b](https://github.com/scaffold-eth/se-2-challenges/assets/55535804/7a7e5324-d5d1-4f10-918c-bfd7c72a52f8)
 
-You can extend this configuration file, adding new parameters that you need to use across your dapp **(make sure you update the above type `ScaffoldConfig`)**:
+## Checkpoint 2: Transfer Funds 💸
 
-```ts
-  tokenIcon: "💎",
-```
+> 💰 Use the faucet to send your multisig contract some funds.
+> You can find the address in the "Multisig" and "Debug Contracts" tabs.
 
-To use the values from the `ScaffoldConfig` in any other file of your application, you first need to import it in those files:
+> Create a transaction in the "Create" tab to send some funds to one of your signers, or to any other address of your choice:
 
-```ts
-import scaffoldConfig from "~~/scaffold.config";
-```
+![multisig-7](https://github.com/scaffold-eth/se-2-challenges/assets/55535804/8b514add-fbe5-4a45-ae68-7659c827a5bf)
 
-## Interacting with your Smart Contracts: SE-2 Custom Hooks
+🖋 This time we will need a second signature (remember we've just updated the number of signatures required to execute a transaction to 2).
 
-Scaffold-ETH 2 provides a collection of custom React hooks designed to simplify interactions with your deployed smart contracts. These hooks are wrappers around `wagmi`, automatically loading the necessary contract ABI and address. They offer an easy-to-use interface for reading from, writing to, and monitoring events emitted by your smart contracts.
+![multisig-8](https://github.com/scaffold-eth/se-2-challenges/assets/55535804/2b7d8501-edfd-47d6-a6d2-937e7bb84caa)
 
-To help developers get started with smart contract interaction using Scaffold-ETH 2, we've provided the following custom hooks:
-
-- [useScaffoldContractRead](#usescaffoldcontractread): for reading public variables and getting data from read-only functions of your contract.
-- [useScaffoldContractWrite](#usescaffoldcontractwrite): for sending transactions to your contract to write data or perform an action.
-- [useScaffoldEventSubscriber](#usescaffoldeventsubscriber): for subscribing to your contract events and receiving real-time updates when events are emitted.
-- [useScaffoldEventHistory](#usescaffoldeventhistory): for retrieving historical event logs for your contract, providing past activity data.
-- [useDeployedContractInfo](#usedeployedcontractinfo): for fetching details from your contract, including the ABI and address.
-- [useScaffoldContract](#usescaffoldcontract): for obtaining a contract instance that lets you interact with the methods of your deployed smart contract.
-
-These hooks offer a simplified and streamlined interface for interacting with your smart contracts. If you need to interact with external contracts, you can use `wagmi` directly, or add external contract data to your `deployedContracts.ts` file.
-
-### useScaffoldContractRead:
-
-Use this hook to read public variables and get data from read-only functions of your smart contract.
-
-```ts
-const { data: totalCounter } = useScaffoldContractRead({
-  contractName: "YourContract",
-  functionName: "getGreeting",
-  args: ["ARGUMENTS IF THE FUNCTION ACCEPTS ANY"],
-});
-```
-
-This example retrieves the data returned by the `getGreeting` function of the `YourContract` smart contract. If the function accepts any arguments, they can be passed in the args array. The retrieved data is stored in the `data` property of the returned object.
-
-### useScaffoldContractWrite:
-
-Use this hook to send a transaction to your smart contract to write data or perform an action.
-
-```ts
-const { writeAsync, isLoading, isMining } = useScaffoldContractWrite({
-  contractName: "YourContract",
-  functionName: "setGreeting",
-  args: ["The value to set"],
-  // For payable functions, expressed in ETH
-  value: "0.01",
-  // The number of block confirmations to wait for before considering transaction to be confirmed (default : 1).
-  blockConfirmations: 1,
-  // The callback function to execute when the transaction is confirmed.
-  onBlockConfirmation: (txnReceipt) => {
-    console.log("Transaction blockHash", txnReceipt.blockHash);
-  },
-});
-```
-
-To send the transaction, you can call the `writeAsync` function returned by the hook. Here's an example usage:
-
-```ts
-<button className="btn btn-primary" onClick={writeAsync}>
-  Send TX
-</button>
-```
-
-This example sends a transaction to the `YourContract` smart contract to call the `setGreeting` function with the arguments passed in `args`. The `writeAsync` function sends the transaction to the smart contract, and the `isLoading` and `isMining` properties indicate whether the transaction is currently being processed by the network.
-
-### useScaffoldEventSubscriber:
-
-Use this hook to subscribe to events emitted by your smart contract, and receive real-time updates when these events are emitted.
-
-```ts
-useScaffoldEventSubscriber({
-  contractName: "YourContract",
-  eventName: "GreetingChange",
-  // The listener function is called whenever a GreetingChange event is emitted by the contract.
-  // It receives the parameters emitted by the event, for this example: GreetingChange(address greetingSetter, string newGreeting, bool premium, uint256 value);
-  listener: (greetingSetter, newGreeting, premium, value) => {
-    console.log(greetingSetter, newGreeting, premium, value);
-  },
-});
-```
+> Open another browser and access with a different owner of the multisig. Sign the transaction with enough owners:
 
-This example subscribes to the `GreetingChange` event emitted by the `YourContract` smart contract, and logs the parameters emitted by the event to the console whenever it is emitted. The `listener` function accepts the parameters emitted by the event, and can be customized according to your needs.
+![multisig-9](https://github.com/scaffold-eth/se-2-challenges/assets/55535804/ad667a69-499a-4ed4-8a40-52d500c94a5b)
 
-### useScaffoldEventHistory:
+(You'll notice you don't need ⛽️gas to sign transactions).
 
-Use this hook to retrieve historical event logs for your smart contract, providing past activity data.
+> Execute the transaction to transfer the funds:
 
-```ts
-const {
-  data: events,
-  isLoading: isLoadingEvents,
-  error: errorReadingEvents,
-  } = useScaffoldEventHistory({
-  contractName: "YourContract",
-  eventName: "GreetingChange",
-  // Specify the starting block number from which to read events, this is a bigint.
-  fromBlock: 31231n,
-  blockData: true,
-  // Apply filters to the event based on parameter names and values { [parameterName]: value },
-  filters: { premium: true }
-  // If set to true it will return the transaction data for each event (default: false),
-  transactionData: true,
-  // If set to true it will return the receipt data for each event (default: false),
-  receiptData: true
-});
-```
+![multisig-10](https://github.com/scaffold-eth/se-2-challenges/assets/55535804/2be26eda-ea09-4a0d-9f0e-d2151cfa26a4)
 
-This example retrieves the historical event logs for the `GreetingChange` event of the `YourContract` smart contract, starting from block number 31231 and filtering events where the premium parameter is true. The data property of the returned object contains an array of event objects, each containing the event parameters and (optionally) the block, transaction, and receipt data. The `isLoading` property indicates whether the event logs are currently being fetched, and the `error` property contains any error that occurred during the fetching process (if applicable).
+---
 
-### useDeployedContractInfo:
+## Checkpoint 3: 💾 Deploy your contracts! 🛰
 
-Use this hook to fetch details about a deployed smart contract, including the ABI and address.
+📡 Edit the `defaultNetwork` to [your choice of public EVM networks](https://ethereum.org/en/developers/docs/networks/) in `packages/hardhat/hardhat.config.ts`
 
-```ts
-// ContractName: name of the deployed contract
-const { data: deployedContractData } = useDeployedContractInfo(contractName);
-```
+🔐 You will need to generate a **deployer address** using `yarn generate` This creates a mnemonic and saves it locally.
 
-This example retrieves the details of the deployed contract with the specified name and stores the details in the deployedContractData object.
+👩‍🚀 Use `yarn account` to view your deployer account balances.
 
-### useScaffoldContract:
+⛽️ You will need to send ETH to your deployer address with your wallet, or get it from a public faucet of your chosen network.
 
-Use this hook to get your contract instance by providing the contract name. It enables you interact with your contract methods.
-For reading data or sending transactions, it's recommended to use `useScaffoldContractRead` and `useScaffoldContractWrite`.
+🚀 Run `yarn deploy` to deploy your smart contract to a public network (selected in `hardhat.config.ts`)
 
-```ts
-const { data: yourContract } = useScaffoldContract({
-  contractName: "YourContract",
-});
-// Returns the greeting and can be called in any function, unlike useScaffoldContractRead
-await yourContract?.greeting();
+> 💬 Hint: You can set the `defaultNetwork` in `hardhat.config.ts` to `sepolia` **OR** you can `yarn deploy --network sepolia`.
 
-// Used to write to a contract and can be called in any function
-import { useWalletClient } from "wagmi";
+> 💬 Hint: For faster loading of the Multisig tabs, consider updating the `fromBlock` passed to `useScaffoldEventHistory` (in the different components we're using it) to `blocknumber - 10` at which your contract was deployed. Example: `fromBlock: 3750241n` (where `n` represents its a [BigInt](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/BigInt)). To find this blocknumber, search your contract's address on Etherscan and find the `Contract Creation` transaction line.
 
-const { data: walletClient } = useWalletClient();
-const { data: yourContract } = useScaffoldContract({
-  contractName: "YourContract",
-  walletClient,
-});
-const setGreeting = async () => {
-  // Call the method in any function
-  await yourContract?.setGreeting("the greeting here");
-};
-```
+---
 
-This example uses the `useScaffoldContract` hook to obtain a contract instance for the `YourContract` smart contract. The data property of the returned object contains the contract instance that can be used to call any of the smart contract methods.
+## Checkpoint 4: 🚢 Ship your frontend! 🚁
 
-## Disabling type and linting error checks
+✏️ Edit your frontend config in `packages/nextjs/scaffold.config.ts` to change the `targetNetwork` to `chains.sepolia` or any other public network.
 
-> **Hint**
-> Typescript helps you catch errors at compile time, which can save time and improve code quality, but can be challenging for those who are new to the language or who are used to the more dynamic nature of JavaScript. Below are the steps to disable type & lint check at different levels
+💻 View your frontend at http://localhost:3000 and verify you see the correct network.
 
-### Disabling commit checks
+📡 When you are ready to ship the frontend app...
 
-We run `pre-commit` [git hook](https://git-scm.com/book/en/v2/Customizing-Git-Git-Hooks) which lints the staged files and don't let you commit if there is an linting error.
+📦 Run `yarn vercel` to package up your frontend and deploy.
 
-To disable this, go to `.husky/pre-commit` file and comment out `yarn lint-staged --verbose`
+> Follow the steps to deploy to Vercel. Once you log in (email, github, etc), the default options should work. It'll give you a public URL.
 
-```diff
-- yarn lint-staged --verbose
-+ # yarn lint-staged --verbose
-```
+> If you want to redeploy to the same production URL you can run `yarn vercel --prod`. If you omit the `--prod` flag it will deploy it to a preview/test URL.
 
-### Deploying to Vercel without any checks
+> 🦊 Since we have deployed to a public testnet, you will now need to connect using a wallet you own or use a burner wallet. By default 🔥 `burner wallets` are only available on `hardhat` . You can enable them on every chain by setting `onlyLocalBurnerWallet: false` in your frontend config (`scaffold.config.ts` in `packages/nextjs/`)
 
-By default, Vercel runs types and lint checks before building your app. The deployment will fail if there are any types or lint errors.
+#### Configuration of Third-Party Services for Production-Grade Apps.
 
-To ignore these checks while deploying from the CLI, use:
+By default, 🏗 Scaffold-ETH 2 provides predefined API keys for popular services such as Alchemy and Etherscan. This allows you to begin developing and testing your applications more easily, avoiding the need to register for these services.
+This is great to complete your **SpeedRunEthereum**.
 
-```shell
-yarn vercel:yolo
-```
+For production-grade applications, it's recommended to obtain your own API keys (to prevent rate limiting issues). You can configure these at:
 
-If your repo is connected to Vercel, you can set `NEXT_PUBLIC_IGNORE_BUILD_ERROR` to `true` in a [environment variable](https://vercel.com/docs/concepts/projects/environment-variables).
+- 🔷`ALCHEMY_API_KEY` variable in `packages/hardhat/.env` and `packages/nextjs/.env.local`. You can create API keys from the [Alchemy dashboard](https://dashboard.alchemy.com/).
 
-### Disabling Github Workflow
+- 📃`ETHERSCAN_API_KEY` variable in `packages/hardhat/.env` with your generated API key. You can get your key [here](https://etherscan.io/myapikey).
 
-We have github workflow setup checkout `.github/workflows/lint.yaml` which runs types and lint error checks every time code is **pushed** to `main` branch or **pull request** is made to `main` branch
+> 💬 Hint: It's recommended to store env's for nextjs in Vercel/system env config for live apps and use .env.local for local testing.
 
-To disable it, **delete `.github` directory**
+---
 
-## Contributing to Scaffold-ETH 2
+## Checkpoint 5: 📜 Contract Verification
 
-We welcome contributions to Scaffold-ETH 2!
+Run the `yarn verify --network your_network` command to verify your contracts on etherscan 🛰
 
-Please see [CONTRIBUTING.MD](https://github.com/scaffold-eth/scaffold-eth-2/blob/main/CONTRIBUTING.md) for more information and guidelines for contributing to Scaffold-ETH 2.
+---
+
+> 👩‍❤️‍👨 Share your public url with friends, add signers and send some tasty ETH to a few lucky ones 😉!!
+
+> 🏃 Head to your next challenge [here](https://speedrunethereum.com).
+
+> 💬 Problems, questions, comments on the stack? Post them to the [🏗 scaffold-eth developers chat](https://t.me/joinchat/F7nCRK3kI93PoCOk)

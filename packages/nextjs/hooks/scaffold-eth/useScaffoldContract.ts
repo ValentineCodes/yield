@@ -1,33 +1,44 @@
-import { Abi } from "abitype";
-import { getContract } from "viem";
+import { Account, Address, Chain, Transport, getContract } from "viem";
+import { PublicClient, usePublicClient } from "wagmi";
 import { GetWalletClientResult } from "wagmi/actions";
 import { useDeployedContractInfo } from "~~/hooks/scaffold-eth";
-import { ContractName } from "~~/utils/scaffold-eth/contract";
+import { Contract, ContractName } from "~~/utils/scaffold-eth/contract";
 
 /**
- * Gets a deployed contract by contract name and returns a contract instance
- * @param config - The config settings
- * @param config.contractName - Deployed contract name
- * @param config.walletClient - An viem wallet client instance (optional)
+ * Gets a viem instance of the contract present in deployedContracts.ts or externalContracts.ts corresponding to
+ * targetNetworks configured in scaffold.config.ts. Optional walletClient can be passed for doing write transactions.
+ * @param config - The config settings for the hook
+ * @param config.contractName - deployed contract name
+ * @param config.walletClient - optional walletClient from wagmi useWalletClient hook can be passed for doing write transactions
  */
-export const useScaffoldContract = <TContractName extends ContractName>({
+export const useScaffoldContract = <
+  TContractName extends ContractName,
+  TWalletClient extends Exclude<GetWalletClientResult, null> | undefined,
+>({
   contractName,
   walletClient,
 }: {
   contractName: TContractName;
-  walletClient?: GetWalletClientResult;
+  walletClient?: TWalletClient | null;
 }) => {
   const { data: deployedContractData, isLoading: deployedContractLoading } = useDeployedContractInfo(contractName);
-
-  // type GetWalletClientResult = WalletClient | null, hence narrowing it to undefined so that it can be passed to getContract
-  const walletClientInstance = walletClient != null ? walletClient : undefined;
+  const publicClient = usePublicClient();
 
   let contract = undefined;
   if (deployedContractData) {
-    contract = getContract({
+    contract = getContract<
+      Transport,
+      Address,
+      Contract<TContractName>["abi"],
+      Chain,
+      Account,
+      PublicClient,
+      TWalletClient
+    >({
       address: deployedContractData.address,
-      abi: deployedContractData.abi as Abi,
-      walletClient: walletClientInstance,
+      abi: deployedContractData.abi as Contract<TContractName>["abi"],
+      walletClient: walletClient ? walletClient : undefined,
+      publicClient,
     });
   }
 

@@ -5,7 +5,8 @@
   "workspaces": {
     "packages": [
       "packages/nextjs",
-      "packages/foundry"
+      "packages/foundry",
+      "packages/backend-local"
     ]
   },
   "scripts": {
@@ -26,7 +27,8 @@
     "postinstall": "husky install",
     "precommit": "lint-staged",
     "vercel": "yarn workspace @se-2/nextjs vercel",
-    "vercel:yolo": "yarn workspace @se-2/nextjs vercel:yolo"
+    "vercel:yolo": "yarn workspace @se-2/nextjs vercel:yolo",
+    "backend-local": "yarn workspace backend-local dev"
   },
   "packageManager": "yarn@3.2.3",
   "devDependencies": {

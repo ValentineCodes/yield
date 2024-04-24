@@ -52,12 +52,12 @@ function main() {
   var allGeneratedContracts = {};
 
   chains.forEach((chain) => {
-    allGeneratedContracts[chain] = [];
-    allGeneratedContracts[chain].push({
-      name: deployments[chain].networkName || "hardhat",
-      chainId: chain,
-      contracts: {},
-    });
+    allGeneratedContracts[chain] = {};
+    // allGeneratedContracts[chain].push({
+    //   name: deployments[chain].networkName || "hardhat",
+    //   chainId: chain,
+    //   contracts: {},
+    // });
     var broadCastObject = JSON.parse(
       fs.readFileSync(`${current_path_to_broadcast}/${chain}/run-latest.json`)
     );
@@ -65,7 +65,7 @@ function main() {
       (transaction) => transaction.transactionType == "CREATE"
     );
     transactionsCreate.forEach((transaction) => {
-      allGeneratedContracts[chain][0]["contracts"][
+      allGeneratedContracts[chain][
         deployments[chain][transaction.contractAddress] ||
           transaction.contractName
       ] = {
@@ -75,18 +75,11 @@ function main() {
     });
   });
 
-  const TARGET_DIR = "../nextjs/generated/";
+  const TARGET_DIR = "../nextjs/contracts/";
 
-  const fileContent = Object.entries(allGeneratedContracts).reduce(
-    (content, [chainId, chainConfig]) => {
-      return `${content}${parseInt(chainId).toFixed(0)}:${JSON.stringify(
-        chainConfig,
-        null,
-        2
-      )},`;
-    },
-    ""
-  );
+  const fileContent = Object.entries(allGeneratedContracts).reduce((content, [chainId, chainConfig]) => {
+    return `${content}${parseInt(chainId).toFixed(0)}:${JSON.stringify(chainConfig, null, 2)},`;
+  }, "");
 
   if (!fs.existsSync(TARGET_DIR)) {
     fs.mkdirSync(TARGET_DIR);

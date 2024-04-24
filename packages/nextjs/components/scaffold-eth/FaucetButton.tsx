@@ -1,8 +1,10 @@
+"use client";
+
 import { useState } from "react";
-import { useIsMounted } from "usehooks-ts";
+import { useTheme } from "next-themes";
 import { createWalletClient, http, parseEther } from "viem";
+import { hardhat } from "viem/chains";
 import { useAccount, useNetwork } from "wagmi";
-import { hardhat } from "wagmi/chains";
 import { BanknotesIcon } from "@heroicons/react/24/outline";
 import { useAccountBalance, useTransactor } from "~~/hooks/scaffold-eth";
 
@@ -21,9 +23,10 @@ const localWalletClient = createWalletClient({
 export const FaucetButton = () => {
   const { address } = useAccount();
   const { balance } = useAccountBalance(address);
+  const { resolvedTheme } = useTheme();
+  const isDarkMode = resolvedTheme === "dark";
 
   const { chain: ConnectedChain } = useNetwork();
-  const isMounted = useIsMounted();
 
   const [loading, setLoading] = useState(false);
 
@@ -46,7 +49,7 @@ export const FaucetButton = () => {
   };
 
   // Render only on local chain
-  if (ConnectedChain?.id !== hardhat.id || !isMounted()) {
+  if (ConnectedChain?.id !== hardhat.id) {
     return null;
   }
 
@@ -54,19 +57,23 @@ export const FaucetButton = () => {
     <div
       className={
         balance
-          ? ""
-          : "tooltip tooltip-bottom tooltip-secondary tooltip-open font-bold before:left-auto before:transform-none before:content-[attr(data-tip)] before:right-0"
+          ? "ml-1"
+          : "ml-1 tooltip tooltip-bottom tooltip-secondary tooltip-open font-bold before:left-auto before:transform-none before:content-[attr(data-tip)] before:right-0"
       }
       data-tip="Grab funds from faucet"
     >
       <button
-        className={`btn btn-secondary btn-sm px-2 rounded-full ${
-          loading ? "loading before:!w-4 before:!h-4 before:!mx-0" : ""
-        }`}
+        className={`btn btn-secondary ${
+          isDarkMode ? "hover:bg-black/20" : ""
+        } focus:bg-secondary hover:shadow-lg btn-sm px-2 rounded-full`}
         onClick={sendETH}
         disabled={loading}
       >
-        {!loading && <BanknotesIcon className="h-4 w-4" />}
+        {!loading ? (
+          <BanknotesIcon className="h-4 w-4" />
+        ) : (
+          <span className="loading loading-spinner loading-xs"></span>
+        )}
       </button>
     </div>
   );
