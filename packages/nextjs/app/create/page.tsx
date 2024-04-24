@@ -1,7 +1,6 @@
 "use client";
 
 import { type FC, useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 import { DEFAULT_TX_DATA, METHODS, Method, PredefinedTxData } from "../owners/page";
 import { useIsMounted, useLocalStorage } from "usehooks-ts";
 import { Address, parseEther } from "viem";
@@ -31,7 +30,6 @@ export const getPoolServerUrl = (id: number) =>
 
 const CreatePage: FC = () => {
   const isMounted = useIsMounted();
-  const router = useRouter();
   const chainId = useChainId();
   const { data: walletClient } = useWalletClient();
   const { targetNetwork } = useTargetNetwork();
