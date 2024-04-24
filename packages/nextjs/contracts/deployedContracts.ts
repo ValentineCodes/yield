@@ -1,7 +1,7 @@
 const contracts = {
   31337: {
     SafeMultiSigWallet: {
-      address: "0x56d13eb21a625eda8438f55df2c31dc3632034f5",
+      address: "0xe039608e695d21ab11675ebba00261a0e750526c",
       abi: [
         {
           type: "constructor",
@@ -323,7 +323,7 @@ const contracts = {
       ],
     },
     RestakeManager: {
-      address: "0xe8addd62fed354203d079926a8e563bc1a7fe81e",
+      address: "0x071586ba1b380b00b793cc336fe01106b0bfbe6d",
       abi: [
         {
           type: "function",
@@ -492,7 +492,7 @@ const contracts = {
       ],
     },
     RoleManager: {
-      address: "0xe039608e695d21ab11675ebba00261a0e750526c",
+      address: "0xe70f935c32da4db13e7876795f1e175465e6458e",
       abi: [
         {
           type: "constructor",
@@ -901,7 +901,7 @@ const contracts = {
       ],
     },
     YEthToken: {
-      address: "0x071586ba1b380b00b793cc336fe01106b0bfbe6d",
+      address: "0x3c15538ed063e688c8df3d571cb7a0062d2fb18d",
       abi: [
         {
           type: "constructor",
@@ -1282,7 +1282,7 @@ const contracts = {
       ],
     },
     OperatorDelegator: {
-      address: "0xe70f935c32da4db13e7876795f1e175465e6458e",
+      address: "0xccf1769d8713099172642eb55ddffc0c5a444fe9",
       abi: [
         {
           type: "constructor",

@@ -41,7 +41,7 @@ export const TransactionItem: FC<TransactionItemProps> = ({ tx, completed, outda
 
   const txnData =
     contractInfo?.abi && tx.data
-      ? decodeFunctionData({ abi: contractInfo.abi as Abi, data: tx.data })
+      ? decodeFunctionData({ abi: tx.abi as Abi, data: tx.data })
       : ({} as DecodeFunctionDataReturnType);
 
   const hasSigned = tx.signers.indexOf(address as string) >= 0;

@@ -3,8 +3,8 @@
 import { type FC, useEffect, useState } from "react";
 import { DEFAULT_TX_DATA, METHODS, Method, PredefinedTxData } from "../owners/page";
 import { useIsMounted, useLocalStorage } from "usehooks-ts";
-import { Address, parseEther } from "viem";
-import { useChainId, useWalletClient } from "wagmi";
+import { Abi, Address, encodeFunctionData, formatEther, isAddress, parseEther } from "viem";
+import { erc20ABI, useAccount, useChainId, useContractRead, useWalletClient } from "wagmi";
 import * as chains from "wagmi/chains";
 import { AddressInput, EtherInput, InputBase } from "~~/components/scaffold-eth";
 import { useDeployedContractInfo, useScaffoldContract, useScaffoldContractRead, useScaffoldContractWrite } from "~~/hooks/scaffold-eth";
@@ -12,6 +12,7 @@ import { useTargetNetwork } from "~~/hooks/scaffold-eth/useTargetNetwork";
 import { notification } from "~~/utils/scaffold-eth";
 
 export type TransactionData = {
+  abi: Abi,
   chainId: number;
   address: Address;
   nonce: bigint;
@@ -25,6 +26,12 @@ export type TransactionData = {
   requiredApprovals: bigint;
 };
 
+const STRATEGY_MANAGER = "0xdfB5f6CE42aAA7830E94ECFCcAd411beF4d4D5b6";
+const DELEGATION_MANAGER = "0xA44151489861Fe9e3055d95adC98FbD462B948e7";
+const STETH_STRATEGY = "0x7D704507b76571a51d9caE8AdDAbBFd0ba0e63d3";
+const OPERATOR = "0xf882cc8107996f15C272080E54fc1Eb036772530";
+const STETH = "0x3F1c547b21f65e10480dE3ad8E19fAAC46C95034";
+
 export const getPoolServerUrl = (id: number) =>
   id === chains.hardhat.id ? "http://localhost:49832/" : "https://backend.multisig.holdings:49832/";
 
@@ -33,12 +40,13 @@ const CreatePage: FC = () => {
   const chainId = useChainId();
   const { data: walletClient } = useWalletClient();
   const { targetNetwork } = useTargetNetwork();
+  const { address: connectedAccount } = useAccount()
 
   const poolServerUrl = getPoolServerUrl(targetNetwork.id);
 
   const [ethValue, setEthValue] = useState("");
   const [operatorAddress, setOperatorAddress] = useState("")
-  const { data: contractInfo } = useDeployedContractInfo("SafeMultiSigWallet");
+  const { data: safeMultisigWallet } = useDeployedContractInfo("SafeMultiSigWallet");
 
   const [predefinedTxData, setPredefinedTxData] = useLocalStorage<PredefinedTxData>("predefined-tx-data", {
     methodName: "transferFunds",
@@ -57,7 +65,7 @@ const CreatePage: FC = () => {
     functionName: "signaturesRequired",
   });
 
-  const txTo = predefinedTxData.methodName === "transferFunds" ? predefinedTxData.signer : contractInfo?.address;
+  const txTo = predefinedTxData.methodName === "transferFunds" ? predefinedTxData.signer : safeMultisigWallet?.address;
 
   const { data: metaMultiSigWallet } = useScaffoldContract({
     contractName: "SafeMultiSigWallet",
@@ -68,20 +76,28 @@ const CreatePage: FC = () => {
     functionName: "getOperator"
   })
 
-  const { write: delegate, isLoading: isLoadingDelegate } = useScaffoldContractWrite({
-    contractName: "OperatorDelegator",
-    functionName: "delegate",
-    args: [operatorAddress]
+  const { data: operatorDelegator } = useScaffoldContract({
+    contractName: "OperatorDelegator"
   })
 
-  const { write: undelegate } = useScaffoldContractWrite({
-    contractName: "OperatorDelegator",
-    functionName: "undelegate"
+  const { data: operatorDelegatorStETHBalance } = useContractRead({
+    abi: erc20ABI,
+    address: STETH,
+    functionName: "balanceOf",
+    args: [operatorDelegator?.address || ""]
   })
 
-  const { write: queueWithdrawal } = useScaffoldContractWrite({
-    contractName: "OperatorDelegator",
-    functionName: "queueWithdrawal"
+  const { data: userStETHBalance } = useContractRead({
+    abi: erc20ABI,
+    address: STETH,
+    functionName: "balanceOf",
+    args: [connectedAccount || ""]
+  })
+
+  const { data: userYETHBalance } = useScaffoldContractRead({
+    contractName: "YEthToken",
+    functionName: "balanceOf",
+    args: [connectedAccount || ""]
   })
 
   const handleCreate = async () => {
@@ -107,13 +123,14 @@ const CreatePage: FC = () => {
       const isOwner = await metaMultiSigWallet?.read.isOwner([recover]);
 
       if (isOwner) {
-        if (!contractInfo?.address || !predefinedTxData.amount || !txTo) {
+        if (!safeMultisigWallet?.address || !predefinedTxData.amount || !txTo) {
           return;
         }
 
         const txData: TransactionData = {
+          abi: safeMultisigWallet.abi,
           chainId: chainId,
-          address: contractInfo.address,
+          address: safeMultisigWallet.address,
           nonce: nonce || 0n,
           to: txTo,
           amount: predefinedTxData.amount,
@@ -147,6 +164,89 @@ const CreatePage: FC = () => {
       console.log(e);
     }
   };
+
+  const handleDelegate = async () => {
+    try {
+      if (!walletClient) {
+        console.log("No wallet client!");
+        return;
+      }
+
+      if (!isAddress(operatorAddress)) {
+        notification.info("Invalid operator address")
+        return
+      }
+
+      const callData = encodeFunctionData({
+        abi: operatorDelegator?.abi as Abi,
+        functionName: "delegate",
+        args: [operatorAddress]
+      })
+
+      const newHash = (await metaMultiSigWallet?.read.getTransactionHash([
+        nonce as bigint,
+        String(operatorDelegator?.address),
+        BigInt("0" as string),
+        callData as `0x${string}`,
+      ])) as `0x${string}`;
+
+      const signature = await walletClient.signMessage({
+        message: { raw: newHash },
+      });
+
+      const recover = (await metaMultiSigWallet?.read.recover([newHash, signature])) as Address;
+
+      const isOwner = await metaMultiSigWallet?.read.isOwner([recover]);
+
+      if (isOwner) {
+        if (!safeMultisigWallet?.address || !operatorDelegator) {
+          return
+        }
+
+        const txData: TransactionData = {
+          abi: operatorDelegator.abi,
+          chainId: chainId,
+          address: safeMultisigWallet.address,
+          nonce: nonce || 0n,
+          to: operatorDelegator.address,
+          amount: "0",
+          data: callData as `0x${string}`,
+          hash: newHash,
+          signatures: [signature],
+          signers: [recover],
+          requiredApprovals: signaturesRequired || 0n,
+        };
+
+        await fetch(poolServerUrl, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(
+            txData,
+            // stringifying bigint
+            (key, value) => (typeof value === "bigint" ? value.toString() : value),
+          ),
+        });
+
+        setTimeout(() => {
+          window.location.href = "/pool";
+        }, 777);
+      } else {
+        notification.info("Only owners can propose transactions");
+      }
+
+    } catch (error) {
+      notification.error("Error while proposing transaction")
+      console.log(error)
+    }
+  }
+
+  const handleUndelegate = async () => {
+
+  }
+
+  const handleQueueWithdrawal = async () => {
+
+  }
 
   const handleWithdrawalCompletion = async () => {
 
@@ -241,7 +341,7 @@ const CreatePage: FC = () => {
               </label>
               <InputBase
                 disabled
-                value={`# ${nonce}`}
+                value={`# ${operatorDelegatorStETHBalance && formatEther(operatorDelegatorStETHBalance)}`}
                 placeholder={"loading..."}
                 onChange={() => {
                   null;
@@ -278,18 +378,17 @@ const CreatePage: FC = () => {
             </div>
 
             <AddressInput
-              disabled={isLoadingDelegate}
               placeholder="Operator address"
               value={operatorAddress}
               onChange={value => setOperatorAddress(value)}
             />
-            <button className="btn btn-secondary btn-sm" disabled={!walletClient || isLoadingDelegate} onClick={() => delegate()}>
+            <button className="btn btn-secondary btn-sm" disabled={!walletClient} onClick={handleDelegate}>
               Delegate
             </button>
-            <button className="btn btn-secondary btn-sm" disabled={!walletClient} onClick={() => undelegate()}>
+            <button className="btn btn-secondary btn-sm" disabled={!walletClient} onClick={handleUndelegate}>
               Undelegate
             </button>
-            <button className="btn btn-secondary btn-sm" disabled={!walletClient} onClick={() => queueWithdrawal()}>
+            <button className="btn btn-secondary btn-sm" disabled={!walletClient} onClick={handleQueueWithdrawal}>
               Queue Withdrawal
             </button>
             <button className="btn btn-secondary btn-sm" disabled={!walletClient} onClick={handleWithdrawalCompletion}>
@@ -304,7 +403,7 @@ const CreatePage: FC = () => {
               </label>
               <InputBase
                 disabled
-                value={`# ${nonce}`}
+                value={`# ${userStETHBalance && formatEther(userStETHBalance)}`}
                 placeholder={"loading..."}
                 onChange={() => {
                   null;
@@ -318,7 +417,7 @@ const CreatePage: FC = () => {
               </label>
               <InputBase
                 disabled
-                value={`# ${nonce}`}
+                value={`# ${userYETHBalance && formatEther(userYETHBalance)}`}
                 placeholder={"loading..."}
                 onChange={() => {
                   null;
@@ -327,7 +426,7 @@ const CreatePage: FC = () => {
             </div>
 
             <div>
-              <InputBase
+              <EtherInput
                 value={''}
                 placeholder="Deposit amount"
                 onChange={() => {
