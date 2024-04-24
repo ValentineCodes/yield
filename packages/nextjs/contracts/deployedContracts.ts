@@ -25,6 +25,10 @@ const contracts = {
           stateMutability: "nonpayable",
         },
         {
+          type: "fallback",
+          stateMutability: "payable",
+        },
+        {
           type: "receive",
           stateMutability: "payable",
         },

@@ -169,4 +169,6 @@ contract SafeMultiSigWallet {
     receive() payable external {
         emit Deposit(msg.sender, msg.value, address(this).balance);
     }
+
+    fallback() external payable {}
 }
