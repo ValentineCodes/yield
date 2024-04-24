@@ -172,6 +172,8 @@ contract OperatorDelegator is IOperatorDelegator, ReentrancyGuard, Context {
     {
         if (address(strategy) == address(0x0)) revert ZeroAddress();
 
+        uint256 nonce = delegationManager.cumulativeWithdrawalsQueued(address(this));
+
         IStrategy[] memory strategiesToWithdraw = new IStrategy[](1);
         strategiesToWithdraw[0] = strategy;
 
@@ -194,7 +196,7 @@ contract OperatorDelegator is IOperatorDelegator, ReentrancyGuard, Context {
             address(this),
             i_operator,
             address(this),
-            0,
+            nonce,
             block.number,
             strategiesToWithdraw,
             amountsToWithdraw
