@@ -21,6 +21,7 @@ gnosis = "https://rpc.gnosischain.com"
 chiado = "https://rpc.chiadochain.net"
 base = "https://mainnet.base.org"
 baseGoerli = "https://goerli.base.org"
+holesky = "https://ethereum-holesky.publicnode.com"
 
 [etherscan]
 polygonMumbai = { key = "${ETHERSCAN_API_KEY}" }

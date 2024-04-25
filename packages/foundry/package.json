@@ -8,7 +8,7 @@
     "compile": "forge compile",
     "generate": "node script/generateAccount.js",
     "deploy": "forge build --build-info --build-info-path out/build-info/ && forge script script/Deploy.s.sol --rpc-url ${1:-default_network} --broadcast --legacy && node script/generateTsAbis.js",
-    "deploy:verify": "forge build --build-info --build-info-path out/build-info/ && forge script script/Deploy.s.sol --rpc-url ${1:-default_network} --broadcast --legacy --verify ; node script/generateTsAbis.js",
+    "deploy:verify": "forge build --build-info --build-info-path out/build-info/ && forge script script/Deploy.s.sol --rpc-url https://ethereum-holesky.publicnode.com --chain-id 17000 --broadcast --legacy --verify ; node script/generateTsAbis.js",
     "verify": "forge build --build-info --build-info-path out/build-info/ && forge script script/VerifyAll.s.sol --ffi --rpc-url ${1:-default_network}",
     "lint": "forge fmt",
     "test": "forge test --fork-url https://ethereum-holesky.publicnode.com --etherscan-api-key H5AUPMUYQQF5BC5GS2JRDRESR89ZK1FJ83"
