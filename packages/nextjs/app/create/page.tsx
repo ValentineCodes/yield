@@ -4,9 +4,9 @@ import { type FC, useEffect, useState } from "react";
 import { DEFAULT_TX_DATA, METHODS, Method, PredefinedTxData } from "../owners/page";
 import { useIsMounted, useLocalStorage } from "usehooks-ts";
 import { Abi, Address, encodeFunctionData, formatEther, isAddress, parseEther } from "viem";
-import { erc20ABI, useAccount, useChainId, useContractRead, useContractWrite, usePublicClient, useWalletClient } from "wagmi";
+import { erc20ABI, useAccount, useChainId, useContractRead, useContractWrite, useWalletClient } from "wagmi";
 import { AddressInput, EtherInput, InputBase } from "~~/components/scaffold-eth";
-import { useDeployedContractInfo, useScaffoldContract, useScaffoldContractRead, useScaffoldContractWrite, useScaffoldEventHistory } from "~~/hooks/scaffold-eth";
+import { useDeployedContractInfo, useScaffoldContract, useScaffoldContractRead, useScaffoldEventHistory } from "~~/hooks/scaffold-eth";
 import { useTargetNetwork } from "~~/hooks/scaffold-eth/useTargetNetwork";
 import { notification } from "~~/utils/scaffold-eth";
 import QueuedWithdrawal from "~~/components/QueuedWithdrawal";
@@ -45,9 +45,11 @@ const CreatePage: FC = () => {
   const [withdrawAmount, setWithdrawAmount] = useState("")
 
   const [isDepositing, setIsDepositing] = useState(false)
+  const [isWithdrawing, setIsWithdrawing] = useState(false)
 
   const { data: safeMultisigWallet } = useDeployedContractInfo("SafeMultiSigWallet");
   const { data: restakeManager } = useDeployedContractInfo("RestakeManager")
+  const { data: yETHToken } = useDeployedContractInfo("YEthToken")
 
   const [predefinedTxData, setPredefinedTxData] = useLocalStorage<PredefinedTxData>("predefined-tx-data", {
     methodName: "transferFunds",
@@ -107,16 +109,22 @@ const CreatePage: FC = () => {
     functionName: "approve"
   })
 
+  const { writeAsync: approveWithdraw } = useContractWrite({
+    abi: erc20ABI,
+    address: yETHToken?.address,
+    functionName: "approve"
+  })
+
   const { writeAsync: deposit } = useContractWrite({
     abi: restakeManager?.abi,
     address: restakeManager?.address,
     functionName: "deposit"
   })
 
-  const { writeAsync: withdraw } = useScaffoldContractWrite({
-    contractName: "RestakeManager",
-    functionName: "withdraw",
-    args: [parseEther(withdrawAmount)]
+  const { writeAsync: withdraw } = useContractWrite({
+    abi: restakeManager?.abi,
+    address: restakeManager?.address,
+    functionName: "withdraw"
   })
 
   const { data: queueWithdrawalEvents } = useScaffoldEventHistory({
@@ -510,6 +518,37 @@ const CreatePage: FC = () => {
     }
   }
 
+  const handleWithdraw = async () => {
+    if (Number(withdrawAmount) <= 0) {
+      notification.info("Invalid withdraw amount")
+      return
+    }
+
+    if (!restakeManager) {
+      notification.info("Loading resources...")
+      return
+    }
+
+    try {
+      setIsWithdrawing(true)
+      // Approve restake manager to spend stETH
+      await approveWithdraw({ args: [restakeManager.address, parseEther(withdrawAmount)] })
+
+      // Deposit yETH to withdraw stETH from RestakeManager
+      await withdraw({ args: [parseEther(withdrawAmount)] })
+
+      setWithdrawAmount("")
+
+      notification.success("Successful Withdrawal")
+
+    } catch (error) {
+      notification.error("Error withdrawing");
+      console.log(error);
+    } finally {
+      setIsWithdrawing(false)
+    }
+  }
+
   useEffect(() => {
     if (predefinedTxData && !predefinedTxData.callData && predefinedTxData.methodName !== "transferFunds") {
       setPredefinedTxData({
@@ -686,18 +725,19 @@ const CreatePage: FC = () => {
                 placeholder="Deposit amount"
                 onChange={setDepositAmount}
               />
-              <button className="btn btn-secondary btn-sm mt-2" disabled={!walletClient} onClick={handleDeposit}>
+              <button className="btn btn-secondary btn-sm mt-2" disabled={!walletClient || isDepositing} onClick={handleDeposit}>
                 Deposit
               </button>
             </div>
 
             <div>
               <InputBase
+                disabled={isWithdrawing}
                 value={withdrawAmount}
                 placeholder="Withdrawal amount"
                 onChange={setWithdrawAmount}
               />
-              <button className="btn btn-secondary btn-sm mt-2" disabled={!walletClient} onClick={() => withdraw()}>
+              <button className="btn btn-secondary btn-sm mt-2" disabled={!walletClient || isWithdrawing} onClick={handleWithdraw}>
                 Withdraw
               </button>
             </div>
