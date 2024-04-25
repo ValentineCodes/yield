@@ -4,8 +4,7 @@ import { type FC, useEffect, useState } from "react";
 import { DEFAULT_TX_DATA, METHODS, Method, PredefinedTxData } from "../owners/page";
 import { useIsMounted, useLocalStorage } from "usehooks-ts";
 import { Abi, Address, encodeFunctionData, formatEther, isAddress, parseEther } from "viem";
-import { erc20ABI, useAccount, useChainId, useContractRead, useWalletClient } from "wagmi";
-import * as chains from "wagmi/chains";
+import { erc20ABI, useAccount, useChainId, useContractRead, useContractWrite, useWalletClient } from "wagmi";
 import { AddressInput, EtherInput, InputBase } from "~~/components/scaffold-eth";
 import { useDeployedContractInfo, useScaffoldContract, useScaffoldContractRead, useScaffoldContractWrite } from "~~/hooks/scaffold-eth";
 import { useTargetNetwork } from "~~/hooks/scaffold-eth/useTargetNetwork";
@@ -32,8 +31,9 @@ const STETH_STRATEGY = "0x7D704507b76571a51d9caE8AdDAbBFd0ba0e63d3";
 const OPERATOR = "0xf882cc8107996f15C272080E54fc1Eb036772530";
 const STETH = "0x3F1c547b21f65e10480dE3ad8E19fAAC46C95034";
 
-export const getPoolServerUrl = (id: number) =>
-  id === chains.hardhat.id ? "http://localhost:49832/" : "https://backend.multisig.holdings:49832/";
+// export const getPoolServerUrl = (id: number) =>
+//   id === chains.hardhat.id ? "http://localhost:49832/" : "https://backend.multisig.holdings:49832/";
+export const getPoolServerUrl = (id: number) => "http://localhost:49832/";
 
 const CreatePage: FC = () => {
   const isMounted = useIsMounted();
@@ -46,7 +46,13 @@ const CreatePage: FC = () => {
 
   const [ethValue, setEthValue] = useState("");
   const [operatorAddress, setOperatorAddress] = useState("")
+  const [depositAmount, setDepositAmount] = useState("0.01")
+  const [withdrawAmount, setWithdrawAmount] = useState("")
+
+  const [isDepositing, setIsDepositing] = useState(false)
+
   const { data: safeMultisigWallet } = useDeployedContractInfo("SafeMultiSigWallet");
+  const { data: restakeManager } = useDeployedContractInfo("RestakeManager")
 
   const [predefinedTxData, setPredefinedTxData] = useLocalStorage<PredefinedTxData>("predefined-tx-data", {
     methodName: "transferFunds",
@@ -98,6 +104,24 @@ const CreatePage: FC = () => {
     contractName: "YEthToken",
     functionName: "balanceOf",
     args: [connectedAccount || ""]
+  })
+
+  const { writeAsync: approveDeposit } = useContractWrite({
+    abi: erc20ABI,
+    address: STETH,
+    functionName: "approve"
+  })
+
+  const { writeAsync: deposit } = useContractWrite({
+    abi: restakeManager?.abi,
+    address: restakeManager?.address,
+    functionName: "deposit"
+  })
+
+  const { writeAsync: withdraw } = useScaffoldContractWrite({
+    contractName: "RestakeManager",
+    functionName: "withdraw",
+    args: [parseEther(withdrawAmount)]
   })
 
   const handleCreate = async () => {
@@ -310,11 +334,107 @@ const CreatePage: FC = () => {
   }
 
   const handleQueueWithdrawal = async () => {
+    try {
+      if (!walletClient) {
+        console.log("No wallet client!");
+        return;
+      }
 
+      const callData = encodeFunctionData({
+        abi: operatorDelegator?.abi as Abi,
+        functionName: "queueWithdrawal"
+      })
+
+      const newHash = (await metaMultiSigWallet?.read.getTransactionHash([
+        nonce as bigint,
+        String(operatorDelegator?.address),
+        BigInt("0" as string),
+        callData as `0x${string}`,
+      ])) as `0x${string}`;
+
+      const signature = await walletClient.signMessage({
+        message: { raw: newHash },
+      });
+
+      const recover = (await metaMultiSigWallet?.read.recover([newHash, signature])) as Address;
+
+      const isOwner = await metaMultiSigWallet?.read.isOwner([recover]);
+
+      if (isOwner) {
+        if (!safeMultisigWallet?.address || !operatorDelegator) {
+          return
+        }
+
+        const txData: TransactionData = {
+          abi: operatorDelegator.abi,
+          chainId: chainId,
+          address: safeMultisigWallet.address,
+          nonce: nonce || 0n,
+          to: operatorDelegator.address,
+          amount: "0",
+          data: callData as `0x${string}`,
+          hash: newHash,
+          signatures: [signature],
+          signers: [recover],
+          requiredApprovals: signaturesRequired || 0n,
+        };
+
+        await fetch(poolServerUrl, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(
+            txData,
+            // stringifying bigint
+            (key, value) => (typeof value === "bigint" ? value.toString() : value),
+          ),
+        });
+
+        setTimeout(() => {
+          window.location.href = "/pool";
+        }, 777);
+      } else {
+        notification.info("Only owners can propose transactions");
+      }
+
+    } catch (error) {
+      notification.error("Error while proposing transaction")
+      console.log(error)
+    }
   }
 
   const handleWithdrawalCompletion = async () => {
 
+  }
+
+  const handleDeposit = async () => {
+    if (Number(depositAmount) <= 0) {
+      notification.info("Invalid deposit amount")
+      return
+    }
+
+    if (!restakeManager) {
+      notification.info("Loading resources...")
+      return
+    }
+
+    try {
+      setIsDepositing(true)
+      // Approve restake manager to spend stETH
+      await approveDeposit({ args: [restakeManager.address, parseEther(depositAmount)] })
+
+      // Deposit stETH into RestakeManager
+      await deposit({ args: [parseEther(depositAmount)] })
+
+      setDepositAmount("")
+
+      notification.success(`Successfully deposited ${depositAmount} stETH`)
+
+    } catch (error) {
+      notification.error("Error depositing");
+      console.log(error);
+    } finally {
+      setIsDepositing(false)
+    }
   }
 
   useEffect(() => {
@@ -492,26 +612,23 @@ const CreatePage: FC = () => {
 
             <div>
               <EtherInput
-                value={''}
+                disabled={isDepositing}
+                value={depositAmount}
                 placeholder="Deposit amount"
-                onChange={() => {
-                  null
-                }}
+                onChange={setDepositAmount}
               />
-              <button className="btn btn-secondary btn-sm mt-2" disabled={!walletClient} onClick={() => null}>
+              <button className="btn btn-secondary btn-sm mt-2" disabled={!walletClient} onClick={handleDeposit}>
                 Deposit
               </button>
             </div>
 
             <div>
               <InputBase
-                value={''}
+                value={withdrawAmount}
                 placeholder="Withdrawal amount"
-                onChange={() => {
-                  null
-                }}
+                onChange={setWithdrawAmount}
               />
-              <button className="btn btn-secondary btn-sm mt-2" disabled={!walletClient} onClick={() => null}>
+              <button className="btn btn-secondary btn-sm mt-2" disabled={!walletClient} onClick={() => withdraw()}>
                 Withdraw
               </button>
             </div>
