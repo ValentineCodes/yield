@@ -4,9 +4,9 @@ import { type FC, useEffect, useState } from "react";
 import { DEFAULT_TX_DATA, METHODS, Method, PredefinedTxData } from "../owners/page";
 import { useIsMounted, useLocalStorage } from "usehooks-ts";
 import { Abi, Address, encodeFunctionData, formatEther, isAddress, parseEther } from "viem";
-import { erc20ABI, useAccount, useChainId, useContractRead, useContractWrite, useWalletClient } from "wagmi";
+import { erc20ABI, useAccount, useChainId, useContractRead, useContractWrite, usePublicClient, useWalletClient } from "wagmi";
 import { AddressInput, EtherInput, InputBase } from "~~/components/scaffold-eth";
-import { useDeployedContractInfo, useScaffoldContract, useScaffoldContractRead, useScaffoldContractWrite } from "~~/hooks/scaffold-eth";
+import { useDeployedContractInfo, useScaffoldContract, useScaffoldContractRead, useScaffoldContractWrite, useScaffoldEventHistory } from "~~/hooks/scaffold-eth";
 import { useTargetNetwork } from "~~/hooks/scaffold-eth/useTargetNetwork";
 import { notification } from "~~/utils/scaffold-eth";
 
@@ -46,7 +46,7 @@ const CreatePage: FC = () => {
 
   const [ethValue, setEthValue] = useState("");
   const [operatorAddress, setOperatorAddress] = useState("")
-  const [depositAmount, setDepositAmount] = useState("0.01")
+  const [depositAmount, setDepositAmount] = useState("")
   const [withdrawAmount, setWithdrawAmount] = useState("")
 
   const [isDepositing, setIsDepositing] = useState(false)
@@ -123,6 +123,31 @@ const CreatePage: FC = () => {
     functionName: "withdraw",
     args: [parseEther(withdrawAmount)]
   })
+
+  const { data: queueWithdrawalEvents } = useScaffoldEventHistory({
+    contractName: "OperatorDelegator",
+    eventName: "WithdrawQueued",
+    fromBlock: 1416542n
+  })
+
+  const publicClient = usePublicClient()
+
+  const isWithrawalReadyForCompletion = async () => {
+    if (!queueWithdrawalEvents || !queueWithdrawalEvents[0]?.args?.startBlock) return
+
+    try {
+      const currentBlock = await publicClient.getBlockNumber()
+      const startBlock = queueWithdrawalEvents[0].args.startBlock
+      const minWithdrawalDelayBlocks = 10n
+
+      if (currentBlock >= startBlock + minWithdrawalDelayBlocks) return true
+
+      return false
+    } catch (error) {
+      console.log(error)
+      return
+    }
+  }
 
   const handleCreate = async () => {
     try {
@@ -550,11 +575,11 @@ const CreatePage: FC = () => {
 
             <div>
               <label className="label">
-                <span className="label-text">Withdrawal in Queue. Blocks remaining</span>
+                <span className="label-text">Is queued withdrawal ready for completion?</span>
               </label>
               <InputBase
                 disabled
-                value={`# ${nonce}`}
+                value={`# ${isWithrawalReadyForCompletion().then(res => res)}`}
                 placeholder={"loading..."}
                 onChange={() => {
                   null;
