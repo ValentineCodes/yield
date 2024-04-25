@@ -165,6 +165,7 @@ const Home: FC = () => {
 
       const isOwner = await metaMultiSigWallet?.read.isOwner([recover]);
 
+      // Only owner can make proposal
       if (isOwner) {
         if (!safeMultisigWallet?.address || !operatorDelegator) {
           return
@@ -184,6 +185,7 @@ const Home: FC = () => {
           requiredApprovals: signaturesRequired || 0n,
         };
 
+        // Save transaction data in the local database
         await fetch(poolServerUrl, {
           method: "POST",
           headers: { "Content-Type": "application/json" },

@@ -56,6 +56,7 @@ const Pool: FC = () => {
   useInterval(() => {
     const getTransactions = async () => {
       try {
+        // Fetch transaction
         const res: { [key: string]: TransactionData } = await (
           await fetch(`${poolServerUrl}${contractInfo?.address}_${chainId}`)
         ).json();
@@ -65,6 +66,7 @@ const Pool: FC = () => {
         for (const i in res) {
           const validSignatures = [];
           // eslint-disable-next-line guard-for-in, no-restricted-syntax
+          // Recover signer of each signature and ensure they're all multisig owners
           for (const s in res[i].signatures) {
             const signer = (await safeMultiSigWallet?.read.recover([
               res[i].hash as `0x${string}`,
@@ -77,6 +79,7 @@ const Pool: FC = () => {
               validSignatures.push({ signer, signature: res[i].signatures[s] });
             }
           }
+
           const update: TransactionData = { ...res[i], validSignatures };
           newTransactions.push(update);
         }
@@ -115,15 +118,15 @@ const Pool: FC = () => {
             {transactions === undefined
               ? "Loading..."
               : transactions.map(tx => {
-                  return (
-                    <TransactionItem
-                      key={tx.hash}
-                      tx={tx}
-                      completed={allEvents.includes(tx.hash as `0x${string}`)}
-                      outdated={lastTx?.nonce != undefined && BigInt(tx.nonce) <= BigInt(lastTx?.nonce)}
-                    />
-                  );
-                })}
+                return (
+                  <TransactionItem
+                    key={tx.hash}
+                    tx={tx}
+                    completed={allEvents.includes(tx.hash as `0x${string}`)}
+                    outdated={lastTx?.nonce != undefined && BigInt(tx.nonce) <= BigInt(lastTx?.nonce)}
+                  />
+                );
+              })}
           </div>
         </div>
       </div>

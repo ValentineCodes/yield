@@ -20,21 +20,30 @@ app.use(cors());
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
+// Get transaction
 app.get("/:key", async (req, res) => {
   const { key } = req.params;
+
   console.log("Get /", key);
+  
   res.status(200).send(transactions[key] || {});
 });
 
+// Save transaction
 app.post("/", async (req, res) => {
   console.log("Post /", req.body);
+
   res.send(req.body);
+
   const key = `${req.body.address}_${req.body.chainId}`;
   console.log("key:", key);
+
   if (!transactions[key]) {
     transactions[key] = {};
   }
+
   transactions[key][req.body.hash] = req.body;
+
   console.log("transactions", transactions);
 });
 

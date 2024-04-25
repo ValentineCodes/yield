@@ -47,6 +47,7 @@ export const TransactionItem: FC<TransactionItemProps> = ({ tx, completed, outda
   const hasSigned = tx.signers.indexOf(address as string) >= 0;
   const hasEnoughSignatures = signaturesRequired ? tx.signatures.length >= Number(signaturesRequired) : false;
 
+  // Sort signatures in ascending order
   const getSortedSigList = async (allSigs: `0x${string}`[], newHash: `0x${string}`) => {
     const sigList = [];
     // eslint-disable-next-line no-restricted-syntax, guard-for-in
@@ -74,6 +75,81 @@ export const TransactionItem: FC<TransactionItemProps> = ({ tx, completed, outda
 
     return [finalSigList, finalSigners];
   };
+
+  const signProposal = async () => {
+    try {
+      if (!walletClient) {
+        return;
+      }
+
+      const newHash = (await safeMultiSigWallet?.read.getTransactionHash([
+        nonce as bigint,
+        tx.to,
+        BigInt(tx.amount),
+        tx.data,
+      ])) as `0x${string}`;
+
+      const signature = await walletClient.signMessage({
+        message: { raw: newHash },
+      });
+
+      const signer = await safeMultiSigWallet?.read.recover([newHash, signature]);
+
+      const isOwner = await safeMultiSigWallet?.read.isOwner([signer as string]);
+
+      if (isOwner) {
+        const [finalSigList, finalSigners] = await getSortedSigList(
+          [...tx.signatures, signature],
+          newHash,
+        );
+
+        // Save transaction data with sorted signatures
+        await fetch(poolServerUrl, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(
+            {
+              ...tx,
+              signatures: finalSigList,
+              signers: finalSigners,
+            },
+            // stringifying bigint
+            (key, value) => (typeof value === "bigint" ? value.toString() : value),
+          ),
+        });
+      } else {
+        notification.info("Only owners can sign transactions");
+      }
+    } catch (e) {
+      notification.error("Error signing transaction");
+      console.log(e);
+    }
+  }
+
+  // Execute transaction on the multisig
+  const executeTransaction = async () => {
+    try {
+      if (!contractInfo || !safeMultiSigWallet) {
+        console.log("No contract info");
+        return;
+      }
+      const newHash = (await safeMultiSigWallet.read.getTransactionHash([
+        nonce as bigint,
+        tx.to,
+        BigInt(tx.amount),
+        tx.data,
+      ])) as `0x${string}`;
+
+      const [finalSigList] = await getSortedSigList(tx.signatures, newHash);
+
+      await transactor(() =>
+        safeMultiSigWallet.write.executeTransaction([tx.to, BigInt(tx.amount), tx.data, finalSigList]),
+      );
+    } catch (e) {
+      notification.error("Error executing transaction");
+      console.log(e);
+    }
+  }
 
   return (
     <>
@@ -141,91 +217,21 @@ export const TransactionItem: FC<TransactionItemProps> = ({ tx, completed, outda
             <div className="font-bold">Outdated</div>
           ) : (
             <>
-              <div title={hasSigned ? "You have already Signed this transaction" : ""}>
+              <div>
                 <button
                   className="btn btn-xs btn-primary"
                   disabled={hasSigned}
-                  title={!hasEnoughSignatures ? "Not enough signers to Execute" : ""}
-                  onClick={async () => {
-                    try {
-                      if (!walletClient) {
-                        return;
-                      }
-
-                      const newHash = (await safeMultiSigWallet?.read.getTransactionHash([
-                        nonce as bigint,
-                        tx.to,
-                        BigInt(tx.amount),
-                        tx.data,
-                      ])) as `0x${string}`;
-
-                      const signature = await walletClient.signMessage({
-                        message: { raw: newHash },
-                      });
-
-                      const signer = await safeMultiSigWallet?.read.recover([newHash, signature]);
-
-                      const isOwner = await safeMultiSigWallet?.read.isOwner([signer as string]);
-
-                      if (isOwner) {
-                        const [finalSigList, finalSigners] = await getSortedSigList(
-                          [...tx.signatures, signature],
-                          newHash,
-                        );
-
-                        await fetch(poolServerUrl, {
-                          method: "POST",
-                          headers: { "Content-Type": "application/json" },
-                          body: JSON.stringify(
-                            {
-                              ...tx,
-                              signatures: finalSigList,
-                              signers: finalSigners,
-                            },
-                            // stringifying bigint
-                            (key, value) => (typeof value === "bigint" ? value.toString() : value),
-                          ),
-                        });
-                      } else {
-                        notification.info("Only owners can sign transactions");
-                      }
-                    } catch (e) {
-                      notification.error("Error signing transaction");
-                      console.log(e);
-                    }
-                  }}
+                  onClick={signProposal}
                 >
                   Sign
                 </button>
               </div>
 
-              <div title={!hasEnoughSignatures ? "Not enough signers to Execute" : ""}>
+              <div>
                 <button
                   className="btn btn-xs btn-primary"
                   disabled={!hasEnoughSignatures}
-                  onClick={async () => {
-                    try {
-                      if (!contractInfo || !safeMultiSigWallet) {
-                        console.log("No contract info");
-                        return;
-                      }
-                      const newHash = (await safeMultiSigWallet.read.getTransactionHash([
-                        nonce as bigint,
-                        tx.to,
-                        BigInt(tx.amount),
-                        tx.data,
-                      ])) as `0x${string}`;
-
-                      const [finalSigList] = await getSortedSigList(tx.signatures, newHash);
-
-                      await transactor(() =>
-                        safeMultiSigWallet.write.executeTransaction([tx.to, BigInt(tx.amount), tx.data, finalSigList]),
-                      );
-                    } catch (e) {
-                      notification.error("Error executing transaction");
-                      console.log(e);
-                    }
-                  }}
+                  onClick={executeTransaction}
                 >
                   Exec
                 </button>
