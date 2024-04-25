@@ -75,8 +75,6 @@ export const TransactionItem: FC<TransactionItemProps> = ({ tx, completed, outda
     return [finalSigList, finalSigners];
   };
 
-  console.log(txnData.args)
-
   return (
     <>
       <input type="checkbox" id={`label-${tx.hash}`} className="modal-toggle" />
