@@ -223,7 +223,7 @@ export const TransactionItem: FC<TransactionItemProps> = ({ tx, completed, outda
                       );
                     } catch (e) {
                       notification.error("Error executing transaction");
-                      console.log("Exec: ", e);
+                      console.log(e);
                     }
                   }}
                 >
