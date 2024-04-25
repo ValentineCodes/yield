@@ -75,6 +75,8 @@ export const TransactionItem: FC<TransactionItemProps> = ({ tx, completed, outda
     return [finalSigList, finalSigners];
   };
 
+  console.log(txnData.args)
+
   return (
     <>
       <input type="checkbox" id={`label-${tx.hash}`} className="modal-toggle" />
@@ -89,10 +91,10 @@ export const TransactionItem: FC<TransactionItemProps> = ({ tx, completed, outda
               {txnData.args ? (
                 <>
                   <h4 className="font-bold">Arguments</h4>
-                  <div className="flex gap-4">
+                  {/* <div className="flex gap-4">
                     Updated signer: <Address address={String(txnData.args?.[0])} />
-                  </div>
-                  <div>Updated signatures required: {String(txnData.args?.[1])}</div>
+                  </div> */}
+                  {/* <div>Updated signatures required: {String(txnData.args?.[1])}</div> */}
                 </>
               ) : (
                 <>
@@ -242,7 +244,7 @@ export const TransactionItem: FC<TransactionItemProps> = ({ tx, completed, outda
           <div>Function name: {txnData.functionName || "transferFunds"}</div>
 
           <div className="flex gap-1 items-center">
-            Addressed to: <Address address={txnData.args?.[0] ? String(txnData.args?.[0]) : tx.to} size="xs" />
+            Addressed to: <Address address={tx.to} size="xs" />
           </div>
         </div>
       </div>
