@@ -134,22 +134,20 @@ const Home: FC = () => {
     fromBlock: 1416542n
   })
 
-  const handleDelegate = async () => {
+  const signProposal = async (
+    functionName: string,
+    args: any[] = []
+  ) => {
     try {
       if (!walletClient) {
         console.log("No wallet client!");
         return;
       }
 
-      if (!isAddress(operatorAddress)) {
-        notification.info("Invalid operator address")
-        return
-      }
-
       const callData = encodeFunctionData({
         abi: operatorDelegator?.abi as Abi,
-        functionName: "delegate",
-        args: [operatorAddress]
+        functionName: functionName,
+        args: args
       })
 
       const newHash = (await metaMultiSigWallet?.read.getTransactionHash([
@@ -207,214 +205,22 @@ const Home: FC = () => {
       notification.error("Error while proposing transaction")
       console.log(error)
     }
+  }
+
+  const handleDelegate = async () => {
+    await signProposal("delegate", [operatorAddress])
   }
 
   const handleUndelegate = async () => {
-    try {
-      if (!walletClient) {
-        console.log("No wallet client!");
-        return;
-      }
-
-      const callData = encodeFunctionData({
-        abi: operatorDelegator?.abi as Abi,
-        functionName: "undelegate"
-      })
-
-      const newHash = (await metaMultiSigWallet?.read.getTransactionHash([
-        nonce as bigint,
-        String(operatorDelegator?.address),
-        BigInt("0" as string),
-        callData as `0x${string}`,
-      ])) as `0x${string}`;
-
-      const signature = await walletClient.signMessage({
-        message: { raw: newHash },
-      });
-
-      const recover = (await metaMultiSigWallet?.read.recover([newHash, signature])) as Address;
-
-      const isOwner = await metaMultiSigWallet?.read.isOwner([recover]);
-
-      if (isOwner) {
-        if (!safeMultisigWallet?.address || !operatorDelegator) {
-          return
-        }
-
-        const txData: TransactionData = {
-          abi: operatorDelegator.abi,
-          chainId: chainId,
-          address: safeMultisigWallet.address,
-          nonce: nonce || 0n,
-          to: operatorDelegator.address,
-          amount: "0",
-          data: callData as `0x${string}`,
-          hash: newHash,
-          signatures: [signature],
-          signers: [recover],
-          requiredApprovals: signaturesRequired || 0n,
-        };
-
-        await fetch(poolServerUrl, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(
-            txData,
-            // stringifying bigint
-            (key, value) => (typeof value === "bigint" ? value.toString() : value),
-          ),
-        });
-
-        setTimeout(() => {
-          window.location.href = "/pool";
-        }, 777);
-      } else {
-        notification.info("Only owners can propose transactions");
-      }
-
-    } catch (error) {
-      notification.error("Error while proposing transaction")
-      console.log(error)
-    }
+    await signProposal("undelegate")
   }
 
   const handleQueueWithdrawal = async () => {
-    try {
-      if (!walletClient) {
-        console.log("No wallet client!");
-        return;
-      }
-
-      const callData = encodeFunctionData({
-        abi: operatorDelegator?.abi as Abi,
-        functionName: "queueWithdrawal"
-      })
-
-      const newHash = (await metaMultiSigWallet?.read.getTransactionHash([
-        nonce as bigint,
-        String(operatorDelegator?.address),
-        BigInt("0" as string),
-        callData as `0x${string}`,
-      ])) as `0x${string}`;
-
-      const signature = await walletClient.signMessage({
-        message: { raw: newHash },
-      });
-
-      const recover = (await metaMultiSigWallet?.read.recover([newHash, signature])) as Address;
-
-      const isOwner = await metaMultiSigWallet?.read.isOwner([recover]);
-
-      if (isOwner) {
-        if (!safeMultisigWallet?.address || !operatorDelegator) {
-          return
-        }
-
-        const txData: TransactionData = {
-          abi: operatorDelegator.abi,
-          chainId: chainId,
-          address: safeMultisigWallet.address,
-          nonce: nonce || 0n,
-          to: operatorDelegator.address,
-          amount: "0",
-          data: callData as `0x${string}`,
-          hash: newHash,
-          signatures: [signature],
-          signers: [recover],
-          requiredApprovals: signaturesRequired || 0n,
-        };
-
-        await fetch(poolServerUrl, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(
-            txData,
-            // stringifying bigint
-            (key, value) => (typeof value === "bigint" ? value.toString() : value),
-          ),
-        });
-
-        setTimeout(() => {
-          window.location.href = "/pool";
-        }, 777);
-      } else {
-        notification.info("Only owners can propose transactions");
-      }
-
-    } catch (error) {
-      notification.error("Error while proposing transaction")
-      console.log(error)
-    }
+    await signProposal("queueWithdrawal")
   }
 
   const handleWithdrawalCompletion = async (withdrawalParams: any) => {
-    try {
-      if (!walletClient) {
-        console.log("No wallet client!");
-        return;
-      }
-
-      const callData = encodeFunctionData({
-        abi: operatorDelegator?.abi as Abi,
-        functionName: "completeWithdrawal",
-        args: [withdrawalParams]
-      })
-
-      const newHash = (await metaMultiSigWallet?.read.getTransactionHash([
-        nonce as bigint,
-        String(operatorDelegator?.address),
-        BigInt("0" as string),
-        callData as `0x${string}`,
-      ])) as `0x${string}`;
-
-      const signature = await walletClient.signMessage({
-        message: { raw: newHash },
-      });
-
-      const recover = (await metaMultiSigWallet?.read.recover([newHash, signature])) as Address;
-
-      const isOwner = await metaMultiSigWallet?.read.isOwner([recover]);
-
-      if (isOwner) {
-        if (!safeMultisigWallet?.address || !operatorDelegator) {
-          return
-        }
-
-        const txData: TransactionData = {
-          abi: operatorDelegator.abi,
-          chainId: chainId,
-          address: safeMultisigWallet.address,
-          nonce: nonce || 0n,
-          to: operatorDelegator.address,
-          amount: "0",
-          data: callData as `0x${string}`,
-          hash: newHash,
-          signatures: [signature],
-          signers: [recover],
-          requiredApprovals: signaturesRequired || 0n,
-        };
-
-        await fetch(poolServerUrl, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(
-            txData,
-            // stringifying bigint
-            (key, value) => (typeof value === "bigint" ? value.toString() : value),
-          ),
-        });
-
-        setTimeout(() => {
-          window.location.href = "/pool";
-        }, 777);
-      } else {
-        notification.info("Only owners can propose transactions");
-      }
-
-    } catch (error) {
-      notification.error("Error while proposing transaction")
-      console.log(error)
-    }
+    await signProposal("completeWithdrawal", [withdrawalParams])
   }
 
   const handleDeposit = async () => {
