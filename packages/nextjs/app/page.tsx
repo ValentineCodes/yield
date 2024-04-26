@@ -98,6 +98,18 @@ const Home: FC = () => {
     args: [connectedAccount || ""]
   })
 
+  const { data: yETHAmountToMint, isLoading: isLoadingYEthAmountToMint } = useScaffoldContractRead({
+    contractName: "RestakeManager",
+    functionName: "getMintAmount",
+    args: [parseEther(depositAmount)]
+  })
+
+  const { data: stETHAmountToWithdraw, isLoading: isLoadingStEthAmountToWithdraw } = useScaffoldContractRead({
+    contractName: "RestakeManager",
+    functionName: "getWithdrawAmount",
+    args: [parseEther(withdrawAmount)]
+  })
+
   const { writeAsync: approveDeposit } = useContractWrite({
     abi: erc20ABI,
     address: STETH,
@@ -391,9 +403,24 @@ const Home: FC = () => {
               placeholder="Deposit amount"
               onChange={setDepositAmount}
             />
-            <button className="btn btn-secondary btn-sm mt-2" disabled={!walletClient || isDepositing} onClick={handleDeposit}>
-              Deposit
-            </button>
+
+            <div className="flex items-center justify-between">
+              <button className="btn btn-secondary btn-sm mt-2" disabled={!walletClient || isDepositing} onClick={handleDeposit}>
+                Deposit
+              </button>
+
+              {
+                !Number(depositAmount) ? null
+                  : !isLoadingYEthAmountToMint && yETHAmountToMint ?
+                    <p>You get: {formatEther(yETHAmountToMint)} yETH</p>
+                    :
+                    <div className="animate-pulse flex space-x-4">
+                      <div className="flex items-center space-y-6">
+                        <div className="h-4 w-28 bg-slate-300 rounded"></div>
+                      </div>
+                    </div>
+              }
+            </div>
           </div>
 
           <div>
@@ -403,9 +430,24 @@ const Home: FC = () => {
               placeholder="Withdrawal amount"
               onChange={setWithdrawAmount}
             />
-            <button className="btn btn-secondary btn-sm mt-2" disabled={!walletClient || isWithdrawing} onClick={handleWithdraw}>
-              Withdraw
-            </button>
+
+            <div className="flex items-center justify-between">
+              <button className="btn btn-secondary btn-sm mt-2" disabled={!walletClient || isWithdrawing} onClick={handleWithdraw}>
+                Withdraw
+              </button>
+
+              {
+                !Number(withdrawAmount) ? null
+                  : !isLoadingStEthAmountToWithdraw && stETHAmountToWithdraw ?
+                    <p>You get: {formatEther(stETHAmountToWithdraw)} stETH</p>
+                    :
+                    <div className="animate-pulse flex space-x-4">
+                      <div className="flex items-center space-y-6">
+                        <div className="h-4 w-28 bg-slate-300 rounded"></div>
+                      </div>
+                    </div>
+              }
+            </div>
           </div>
         </div>
       </div>
