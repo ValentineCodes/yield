@@ -24,6 +24,12 @@ cd yield
 yarn install
 ```
 
+> Run tests - `Must have data connection due to Holesky testnet fork`
+
+```sh
+yarn test
+```
+
 > In the same terminal, deploy contracts to Holesky testnet
 
 Must set the enviromnent variables in foundry as specified in `.env.example` and the signers in `Deploy.s.sol`
