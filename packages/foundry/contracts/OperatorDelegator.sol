@@ -95,6 +95,7 @@ contract OperatorDelegator is IOperatorDelegator, ReentrancyGuard, Context {
         uint256 amount
     ) external onlyRestakeManager returns (uint256 shares) {
         if (address(strategy) == address(0x0)) revert ZeroAddress();
+        if(s_operator == address(0x0)) revert NoOperator();
 
         // Move the tokens into this contract
         IERC20(i_stETH).safeTransferFrom(_msgSender(), address(this), amount);
