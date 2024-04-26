@@ -10,6 +10,9 @@ error InsufficientFunds();
 /// @dev Error for 0x0 address inputs
 error ZeroAddress();
 
+/// @dev Error when there are no deposits into EigenLayer
+error NoDeposits();
+
 /// @dev Error when there's no operator
 error NoOperator();
 

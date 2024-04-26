@@ -169,6 +169,8 @@ contract OperatorDelegator is IOperatorDelegator, ReentrancyGuard, Context {
         uint256[] memory amountsToWithdraw = new uint256[](1);
         amountsToWithdraw[0] = strategy.shares(address(this));
 
+        if(amountsToWithdraw[0] == 0) revert NoDeposits();
+
         IDelegationManager.QueuedWithdrawalParams[] memory queuedWithdrawalParams = new IDelegationManager.QueuedWithdrawalParams[](1);
         queuedWithdrawalParams[0] = IDelegationManager.QueuedWithdrawalParams(
                     strategiesToWithdraw,
