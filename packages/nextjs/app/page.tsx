@@ -93,10 +93,23 @@ const Home: FC = () => {
     args: [connectedAccount || ""]
   })
 
+  const { data: stETHAllowance, isLoading: isLoadingStETHAllowance } = useContractRead({
+    abi: erc20ABI,
+    address: STETH,
+    functionName: "allowance",
+    args: [connectedAccount || "", restakeManager?.address || ""]
+  })
+
   const { data: userYETHBalance } = useScaffoldContractRead({
     contractName: "YEthToken",
     functionName: "balanceOf",
     args: [connectedAccount || ""]
+  })
+
+  const { data: yETHAllowance, isLoading: isLoadingYETHAllowance } = useScaffoldContractRead({
+    contractName: "YEthToken",
+    functionName: "allowance",
+    args: [connectedAccount || "", restakeManager?.address || ""]
   })
 
   const { data: yETHAmountToMint, isLoading: isLoadingYEthAmountToMint } = useScaffoldContractRead({
@@ -244,16 +257,19 @@ const Home: FC = () => {
       return
     }
 
-    if (!restakeManager) {
+    if (!restakeManager || stETHAllowance === undefined) {
       notification.info("Loading resources...")
       return
     }
 
     try {
       setIsDepositing(true)
-      // Approve restake manager to spend stETH
-      const approveTx = await approveDeposit({ args: [restakeManager.address, parseEther(depositAmount)] })
-      await publicClient.waitForTransactionReceipt({ hash: approveTx.hash })
+
+      if (stETHAllowance < parseEther(depositAmount)) {
+        // Approve restake manager to spend stETH
+        const approveTx = await approveDeposit({ args: [restakeManager.address, parseEther(depositAmount)] })
+        await publicClient.waitForTransactionReceipt({ hash: approveTx.hash })
+      }
 
       // Deposit stETH into RestakeManager
       const depositTx = await deposit({ args: [parseEther(depositAmount)] })
@@ -275,16 +291,19 @@ const Home: FC = () => {
       return
     }
 
-    if (!restakeManager) {
+    if (!restakeManager || yETHAllowance === undefined) {
       notification.info("Loading resources...")
       return
     }
 
     try {
       setIsWithdrawing(true)
-      // Approve restake manager to spend stETH
-      const approveTx = await approveWithdraw({ args: [restakeManager.address, parseEther(withdrawAmount)] })
-      await publicClient.waitForTransactionReceipt({ hash: approveTx.hash })
+
+      if (yETHAllowance < parseEther(withdrawAmount)) {
+        // Approve restake manager to spend stETH
+        const approveTx = await approveWithdraw({ args: [restakeManager.address, parseEther(withdrawAmount)] })
+        await publicClient.waitForTransactionReceipt({ hash: approveTx.hash })
+      }
 
       // Withdraw stETH from RestakeManager
       const withdrawTx = await withdraw({ args: [parseEther(withdrawAmount)] })
@@ -411,7 +430,7 @@ const Home: FC = () => {
 
             <div className="flex items-center justify-between">
               <button className="btn btn-secondary btn-sm mt-2" disabled={!walletClient || isDepositing} onClick={handleDeposit}>
-                Deposit
+                {isDepositing ? "Depositing..." : "Deposit"}
               </button>
 
               {
@@ -438,7 +457,7 @@ const Home: FC = () => {
 
             <div className="flex items-center justify-between">
               <button className="btn btn-secondary btn-sm mt-2" disabled={!walletClient || isWithdrawing} onClick={handleWithdraw}>
-                Withdraw
+                {isWithdrawing ? "Withdrawing..." : "Withdraw"}
               </button>
 
               {
