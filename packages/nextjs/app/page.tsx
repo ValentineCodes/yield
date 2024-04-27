@@ -3,7 +3,7 @@
 import { type FC, useState } from "react";
 import { useIsMounted } from "usehooks-ts";
 import { Abi, Address, encodeFunctionData, formatEther, isAddress, parseEther } from "viem";
-import { erc20ABI, useAccount, useChainId, useContractRead, useContractWrite, useWalletClient } from "wagmi";
+import { erc20ABI, useAccount, useChainId, useContractRead, useContractWrite, usePublicClient, useWalletClient } from "wagmi";
 import { AddressInput, EtherInput, InputBase } from "~~/components/scaffold-eth";
 import { useDeployedContractInfo, useScaffoldContract, useScaffoldContractRead, useScaffoldEventHistory } from "~~/hooks/scaffold-eth";
 import { useTargetNetwork } from "~~/hooks/scaffold-eth/useTargetNetwork";
@@ -35,6 +35,7 @@ const Home: FC = () => {
   const { data: walletClient } = useWalletClient();
   const { targetNetwork } = useTargetNetwork();
   const { address: connectedAccount } = useAccount()
+  const publicClient = usePublicClient()
 
   const poolServerUrl = getPoolServerUrl(targetNetwork.id);
 
@@ -251,10 +252,12 @@ const Home: FC = () => {
     try {
       setIsDepositing(true)
       // Approve restake manager to spend stETH
-      await approveDeposit({ args: [restakeManager.address, parseEther(depositAmount)] })
+      const approveTx = await approveDeposit({ args: [restakeManager.address, parseEther(depositAmount)] })
+      await publicClient.waitForTransactionReceipt({ hash: approveTx.hash })
 
       // Deposit stETH into RestakeManager
-      await deposit({ args: [parseEther(depositAmount)] })
+      const depositTx = await deposit({ args: [parseEther(depositAmount)] })
+      await publicClient.waitForTransactionReceipt({ hash: depositTx.hash })
 
       setDepositAmount("")
 
@@ -280,10 +283,12 @@ const Home: FC = () => {
     try {
       setIsWithdrawing(true)
       // Approve restake manager to spend stETH
-      await approveWithdraw({ args: [restakeManager.address, parseEther(withdrawAmount)] })
+      const approveTx = await approveWithdraw({ args: [restakeManager.address, parseEther(withdrawAmount)] })
+      await publicClient.waitForTransactionReceipt({ hash: approveTx.hash })
 
-      // Deposit yETH to withdraw stETH from RestakeManager
-      await withdraw({ args: [parseEther(withdrawAmount)] })
+      // Withdraw stETH from RestakeManager
+      const withdrawTx = await withdraw({ args: [parseEther(withdrawAmount)] })
+      await publicClient.waitForTransactionReceipt({ hash: withdrawTx.hash })
 
       setWithdrawAmount("")
 
