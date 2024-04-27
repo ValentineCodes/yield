@@ -1,7 +1,7 @@
 const contracts = {
   17000: {
     SafeMultiSigWallet: {
-      address: "0xef20ad6245cf8e854de8952bbb04bf8594914aaf",
+      address: "0xf6a28eb24c31c0c0aac1518e7abe09b5423a3231",
       abi: [
         {
           type: "constructor",
@@ -327,7 +327,7 @@ const contracts = {
       ],
     },
     RestakeManager: {
-      address: "0xe249c88d3e476a4364030443334335abeebb9670",
+      address: "0xa5e186e7ee316ffa51cf58c154008681fc68fef3",
       abi: [
         {
           type: "function",
@@ -496,7 +496,7 @@ const contracts = {
       ],
     },
     RoleManager: {
-      address: "0x37dcd499a633397061ac39f22a5e2e6928272630",
+      address: "0xa1649ace341fd615c1a6694febdfb598fd02e753",
       abi: [
         {
           type: "constructor",
@@ -905,7 +905,7 @@ const contracts = {
       ],
     },
     YEthToken: {
-      address: "0xdee8008fc5bfc9c8b6f0abf12aa592f970801c95",
+      address: "0x5bd51cd1d76d51e1229750035baecb96d6a26abb",
       abi: [
         {
           type: "constructor",
@@ -1286,7 +1286,7 @@ const contracts = {
       ],
     },
     OperatorDelegator: {
-      address: "0x74cd432f0ff8786c4cea5817e5b402a744a2af53",
+      address: "0xca8f1f5ca95b17c03415f640255a15a54e7b1d1c",
       abi: [
         {
           type: "constructor",
@@ -1597,6 +1597,16 @@ const contracts = {
         {
           type: "error",
           name: "AlreadyDelegated",
+          inputs: [],
+        },
+        {
+          type: "error",
+          name: "NoDeposits",
+          inputs: [],
+        },
+        {
+          type: "error",
+          name: "NoOperator",
           inputs: [],
         },
         {
@@ -3220,6 +3230,16 @@ const contracts = {
         {
           type: "error",
           name: "AlreadyDelegated",
+          inputs: [],
+        },
+        {
+          type: "error",
+          name: "NoDeposits",
+          inputs: [],
+        },
+        {
+          type: "error",
+          name: "NoOperator",
           inputs: [],
         },
         {
