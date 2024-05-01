@@ -98,10 +98,10 @@ contract RestakeManager is
     /// @return Amount of yETH tokens to mint
     function getMintAmount(uint256 amount) public view returns (uint256) {
         uint256 yETHTotalSupply = i_yEth.totalSupply();
-        uint256 stETHTVL = i_operatorDelegator.getTokenBalanceFromStrategy();
+        uint256 stETHTVL = i_operatorDelegator.getTokenBalanceFromStrategy() + IERC20(i_stETH).balanceOf(address(i_operatorDelegator));
 
         // For first mint, just return the new value added.
-        if (yETHTotalSupply == 0 || stETHTVL == 0) {
+        if (yETHTotalSupply == 0) {
             return amount;
         }
 
